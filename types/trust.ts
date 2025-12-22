@@ -1,6 +1,8 @@
 /**
- * Raw data structure from twitterapi.io /twitter/user/info endpoint.
- * All fields are readonly to enforce immutability in functional transformations.
+ * Raw X account metadata from twitterapi.io.
+ *
+ * All fields readonly to prevent accidental mutation during scoring.
+ * Optional fields reflect API reality—not all data is always available.
  */
 export type XRawData = {
   readonly id: string;
@@ -18,10 +20,10 @@ export type XRawData = {
 };
 
 /**
- * Trust verdict categories based on calculated risk score.
- * TRUSTED: Low risk, account appears legitimate
- * CAUTION: Medium risk, some suspicious indicators
- * DANGER: High risk, likely bot or impersonator
+ * Categorical verdicts for quick decision-making.
+ *
+ * Three categories mirror traffic light intuition: green/yellow/red.
+ * More categories create decision paralysis; fewer lose nuance.
  */
 export type TrustVerdict = "TRUSTED" | "CAUTION" | "DANGER";
 
@@ -53,8 +55,10 @@ export interface ScoreBreakdown {
 }
 
 /**
- * Complete trust assessment report containing score, verdict, and risk flags.
- * Flags are immutable array of human-readable risk indicators.
+ * Complete trust assessment with transparency signals.
+ *
+ * Score alone isn't actionable—users need flags (why it's risky),
+ * positive indicators (why to trust it), and confidence (how sure we are).
  */
 export interface TrustReport {
   readonly userInfo: UserInfo;

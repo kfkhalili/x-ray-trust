@@ -9,8 +9,11 @@ import { AuthButton } from '@/components/AuthButton';
 import type { TrustReport } from '@/types/trust';
 
 /**
- * Main landing page with search functionality and trust verification results.
- * Implements credit-based verification system with Stripe integration.
+ * Main landing page with search and verification.
+ *
+ * Why sessionStorage + URL params? Users refresh pages. Persisting search state
+ * prevents losing results. URL params enable shareable links; sessionStorage
+ * provides instant restoration without API calls.
  */
 export default function Home() {
   const [username, setUsername] = useState('');

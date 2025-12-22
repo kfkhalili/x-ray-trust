@@ -1,16 +1,20 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Creates a Supabase admin client using service role key.
- * This bypasses Row Level Security and should ONLY be used server-side.
+ * Admin Supabase client that bypasses RLS.
  *
- * WARNING: Never expose the service role key to the client.
- * Only use this for webhooks and other server-side admin operations.
+ * Why bypass RLS? Webhooks run without user context—no auth cookies, no session.
+ * RLS would block all operations. Service role key grants full database access,
+ * so we only use this for verified server-to-server operations (Stripe webhooks).
+ *
+ * Defensive check: Throws if env vars missing to fail fast during development.
  */
 export const createAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // Defensive check: Fail fast if env vars missing
+  // Prevents cryptic errors later when trying to use the client
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL must be set');
   }

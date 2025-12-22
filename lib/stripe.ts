@@ -1,16 +1,21 @@
 import Stripe from 'stripe';
 
 /**
- * Stripe client instance for server-side operations.
- * Initialized with secret key from environment variables.
+ * Stripe client for server-side payment operations.
+ *
+ * API version pinned to prevent breaking changes. Stripe updates API versions
+ * regularly; pinning ensures our code doesn't break when Stripe releases new versions.
  */
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
 });
 
 /**
- * Credit pack configuration mapping Stripe Price IDs to credit amounts.
- * Using Map for O(1) lookups and type safety over object literals.
+ * Credit pack pricing configuration.
+ *
+ * Why Map? O(1) lookups when finding price IDs by credit amount during checkout.
+ * Also provides better type safety than object literals—TypeScript enforces
+ * the string→number mapping contract.
  */
 export const CREDIT_PACKS = new Map<string, number>([
   // Format: [Stripe Price ID, Credit Amount]
@@ -20,8 +25,10 @@ export const CREDIT_PACKS = new Map<string, number>([
 ]);
 
 /**
- * Reverse lookup: Get Price ID from credit amount.
- * Used when user selects a credit pack to purchase.
+ * Finds Stripe Price ID for a given credit amount.
+ *
+ * Used during checkout when user selects "50 credits" and we need to find
+ * the corresponding Stripe Price ID to create the checkout session.
  */
 export const getPriceIdForCredits = (credits: number): string | undefined => {
   for (const [priceId, creditAmount] of CREDIT_PACKS.entries()) {
@@ -33,8 +40,10 @@ export const getPriceIdForCredits = (credits: number): string | undefined => {
 };
 
 /**
- * Get credit amount for a given Price ID.
- * Returns undefined if Price ID is not found in configuration.
+ * Looks up credit amount for a Stripe Price ID.
+ *
+ * Used in webhook handler to determine how many credits to grant based on
+ * the Price ID from the completed checkout session.
  */
 export const getCreditsForPriceId = (priceId: string): number | undefined => {
   return CREDIT_PACKS.get(priceId);

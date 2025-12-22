@@ -1,25 +1,37 @@
-'use client';
+"use client";
 
-import { UserInfo } from '@/types/trust';
-import { Calendar, Users, UserPlus, Verified, ExternalLink } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { UserInfo } from "@/types/trust";
+import {
+  Calendar,
+  Users,
+  UserPlus,
+  Verified,
+  ExternalLink,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface UserDetailsProps {
   userInfo: UserInfo;
 }
 
 /**
- * Displays detailed information about the X account being verified.
- * Shows profile picture, name, username, follower counts, and account age.
+ * Account identity card for visual verification.
+ *
+ * Profile picture, name, and stats let users quickly confirm they're
+ * looking at the right account before consuming the trust score.
+ * Clickable username links to X for manual verification if desired.
  */
 export const UserDetails = ({ userInfo }: UserDetailsProps) => {
-  const accountAge = formatDistanceToNow(new Date(userInfo.createdAt), { addSuffix: false });
+  const accountAge = formatDistanceToNow(new Date(userInfo.createdAt), {
+    addSuffix: false,
+  });
   const accountAgeYears = Math.floor(
-    (new Date().getTime() - new Date(userInfo.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 365)
+    (new Date().getTime() - new Date(userInfo.createdAt).getTime()) /
+      (1000 * 60 * 60 * 24 * 365)
   );
 
   const formatNumber = (num?: number): string => {
-    if (!num && num !== 0) return 'N/A';
+    if (!num && num !== 0) return "N/A";
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
@@ -29,7 +41,7 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
     <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm mb-6">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Profile Picture */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {userInfo.profilePicture ? (
             <img
               src={userInfo.profilePicture}
@@ -37,7 +49,11 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
               className="w-20 h-20 rounded-full border-2 border-gray-700"
               onError={(e) => {
                 // Fallback to default avatar if image fails to load
-                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo.name)}&background=10b981&color=fff&size=128`;
+                (
+                  e.target as HTMLImageElement
+                ).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  userInfo.name
+                )}&background=10b981&color=fff&size=128`;
               }}
             />
           ) : (
@@ -54,9 +70,14 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
           {/* Name and Username */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-xl font-bold text-gray-100">{userInfo.name}</h2>
+              <h2 className="text-xl font-bold text-gray-100">
+                {userInfo.name}
+              </h2>
               {userInfo.blueVerified && (
-                <Verified className="w-5 h-5 text-blue-400" fill="currentColor" />
+                <Verified
+                  className="w-5 h-5 text-blue-400"
+                  fill="currentColor"
+                />
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -64,14 +85,15 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
                 href={`https://twitter.com/${userInfo.username}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-1"
-              >
+                className="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-1">
                 <span>@{userInfo.username}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
             {userInfo.description && (
-              <p className="text-gray-300 text-sm mt-2 line-clamp-2">{userInfo.description}</p>
+              <p className="text-gray-300 text-sm mt-2 line-clamp-2">
+                {userInfo.description}
+              </p>
             )}
           </div>
 
@@ -106,7 +128,9 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
                 <span className="text-xs font-medium">Age</span>
               </div>
               <p className="text-lg font-semibold text-gray-100">
-                {accountAgeYears > 0 ? `${accountAgeYears}y` : accountAge.split(' ')[0]}
+                {accountAgeYears > 0
+                  ? `${accountAgeYears}y`
+                  : accountAge.split(" ")[0]}
               </p>
             </div>
 
@@ -117,7 +141,7 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
                 <span className="text-xs font-medium">Status</span>
               </div>
               <p className="text-lg font-semibold text-gray-100">
-                {userInfo.blueVerified ? 'Verified' : 'Unverified'}
+                {userInfo.blueVerified ? "Verified" : "Unverified"}
               </p>
             </div>
           </div>
@@ -126,4 +150,3 @@ export const UserDetails = ({ userInfo }: UserDetailsProps) => {
     </div>
   );
 };
-

@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/client';
 import { LogIn, LogOut, User } from 'lucide-react';
 
 /**
- * Authentication button component with sign-in/sign-out functionality.
- * Uses Supabase email authentication with magic link flow.
+ * Auth button with magic link sign-in.
+ *
+ * Why magic links? No passwords to manage, reset, or leak. Email verification
+ * is built-in. Users click link in email → authenticated. Simpler UX, better security.
  */
 export const AuthButton = () => {
   const [user, setUser] = useState<any>(null);

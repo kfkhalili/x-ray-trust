@@ -2,10 +2,11 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
- * Creates a Supabase client for server-side operations.
- * Uses SSR package to handle cookie-based authentication in Next.js App Router.
+ * Server-side Supabase client with cookie-based auth.
  *
- * Note: In Next.js 16+, cookies() is async, so this function is now async.
+ * Why async? Next.js 16 made cookies() async to support streaming responses.
+ * This client reads/writes auth cookies automatically, enabling seamless
+ * server-side authentication without manual cookie management.
  */
 export const createClient = async () => {
   const cookieStore = await cookies();

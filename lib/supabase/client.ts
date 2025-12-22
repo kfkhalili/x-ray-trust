@@ -1,8 +1,10 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 /**
- * Creates a Supabase client for client-side operations.
- * Uses SSR package for consistent authentication handling across server and client.
+ * Browser-side Supabase client.
+ *
+ * Uses @supabase/ssr for cookie-based auth that works seamlessly with Next.js
+ * App Router. Cookies are managed automatically—no manual token handling needed.
  */
 export const createClient = () => {
   return createBrowserClient(

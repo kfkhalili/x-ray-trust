@@ -7,8 +7,11 @@ import Stripe from 'stripe';
 export const dynamic = 'force-dynamic';
 
 /**
- * Verifies Stripe webhook signature to ensure request authenticity.
- * Returns the event object if valid, null otherwise.
+ * Verifies Stripe webhook signature before processing.
+ *
+ * Why verify? Anyone can POST to this endpoint. Without signature verification,
+ * attackers could send fake "payment succeeded" events and grant themselves credits.
+ * Stripe's signature proves the event came from Stripe's servers.
  */
 const verifyWebhookSignature = async (
   request: NextRequest
@@ -35,8 +38,11 @@ const verifyWebhookSignature = async (
 };
 
 /**
- * Adds credits to user's profile after successful payment.
- * Uses Supabase admin client to bypass RLS for webhook operations.
+ * Grants credits after verified payment completion.
+ *
+ * Why admin client? Webhooks run server-to-server without user session cookies.
+ * RLS would block these requests. Admin client bypasses RLS because we've
+ * already verified the payment via Stripe signature.
  */
 const addCreditsToUser = async (userId: string, credits: number): Promise<boolean> => {
   // Validate env vars at runtime
@@ -68,17 +74,11 @@ const addCreditsToUser = async (userId: string, credits: number): Promise<boolea
 };
 
 /**
- * POST /api/webhook
+ * POST /api/webhook — handles Stripe payment events.
  *
- * Handles Stripe webhook events for payment completion.
- *
- * Flow:
- * 1. Verify webhook signature
- * 2. Handle checkout.session.completed event
- * 3. Extract user ID and credits from metadata
- * 4. Add credits to user's profile
- *
- * Security: Webhook signature verification prevents unauthorized credit grants.
+ * Only processes checkout.session.completed. Other events (subscription updates,
+ * refunds, etc.) are acknowledged but ignored. Keeps webhook handler simple
+ * and focused on the credit-granting use case.
  */
 export async function POST(request: NextRequest) {
   const event = await verifyWebhookSignature(request);

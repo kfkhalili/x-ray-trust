@@ -1,0 +1,145 @@
+# X-Ray Trust - Cursor Rules
+
+## Code Philosophy
+
+### Comments: Why, Not What
+- Comments explain **WHY** decisions were made, not **WHAT** the code does
+- If code needs explanation of what it does, the code should be clearer
+- Focus on reasoning, trade-offs, and design decisions
+- Example: "Why async? Next.js 16 made cookies() async..." not "This function is async"
+
+### Type Safety
+- **Strict TypeScript**: No `any`, no `unknown`, no type assertions
+- Use `readonly` modifiers for immutability
+- Prefer type inference where possible, explicit types where needed
+- Domain types live in `types/trust.ts`
+
+### Functional Programming
+- Pure functions for trust calculations (no side effects)
+- Immutable data transformations
+- Prefer `.map()`, `.filter()`, `.reduce()` over loops
+- Trust engine is stateless and testable
+
+## Next.js 16 Patterns
+
+### Server Components & API Routes
+- `cookies()` is now async - always `await` it
+- Server-side Supabase client must be async: `await createClient()`
+- API routes need `export const dynamic = 'force-dynamic'` to prevent build-time analysis
+- Use `@supabase/ssr` for cookie-based auth
+
+### Client Components
+- Mark with `"use client"` directive
+- Use `createClient()` from `@/lib/supabase/client` for browser-side operations
+- SessionStorage + URL params for state persistence (see `app/page.tsx`)
+
+## Supabase Patterns
+
+### Client Selection
+- **Server-side**: `@/lib/supabase/server` - async, handles cookies automatically
+- **Client-side**: `@/lib/supabase/client` - browser, cookie-based auth
+- **Admin/Webhooks**: `@/lib/supabase/admin` - bypasses RLS, service role key only
+
+### Row Level Security (RLS)
+- Always use RLS for user-facing queries
+- Admin client ONLY for webhooks and server-to-server operations
+- Never expose service role key to client
+
+## Stripe Integration
+
+### Checkout Flow
+- Store `userId` and `credits` in checkout session metadata
+- Webhook handler extracts metadata to grant credits
+- Always verify webhook signatures before processing
+
+### Credit Packs
+- Configure in `lib/stripe.ts` using `Map<string, number>` (Price ID → Credits)
+- Empty by default - must be populated with actual Stripe Price IDs
+
+## Trust Engine
+
+### Scoring Algorithm
+- 5 signals: Age (25%), Ratio (25%), Activity (25%), Engagement (15%), Listed (10%)
+- Automated accounts get score cap of 15 (DANGER verdict)
+- Missing data defaults to neutral (50) with reduced confidence
+- All scoring functions are pure and testable
+
+### Data Flow
+- `XRawData` from twitterapi.io → `calculateTrust()` → `TrustReport`
+- User info passed via `_userInfo` internal field
+- Breakdown, confidence, and positive indicators included in report
+
+## Testing
+
+### Unit Tests
+- Jest configured for TypeScript and Next.js
+- Tests in `lib/__tests__/`
+- Focus on trust engine logic and utility functions
+- Run with `npm test`
+
+## Project Structure
+
+### Key Files
+- `lib/trust-engine.ts` - Core scoring logic (pure functions)
+- `types/trust.ts` - Domain model types
+- `app/api/verify/route.ts` - Main verification endpoint
+- `app/api/webhook/route.ts` - Stripe webhook handler
+- `components/TrustResults.tsx` - Results display with progressive disclosure
+
+### Scripts
+- `scripts/add-credits.ts` - Dev utility to add credits to users
+- Excluded from TypeScript compilation (see `tsconfig.json`)
+
+## Environment Variables
+
+### Required
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public Supabase key
+- `SUPABASE_SERVICE_ROLE_KEY` - Admin operations (webhooks)
+- `TWITTER_API_KEY` - twitterapi.io API key
+- `STRIPE_SECRET_KEY` - Stripe server key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
+- `NEXT_PUBLIC_APP_URL` - App URL for redirects
+
+### Local Development
+- Use `.env.local` (gitignored)
+- Copy from `.env.example` for reference
+- Local Supabase: `npx supabase start` (requires Docker)
+- Local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhook`
+
+## UI/UX Patterns
+
+### Progressive Disclosure
+- Score first (immediate answer)
+- Breakdown second (understand why)
+- Positive indicators third (build confidence)
+- Risk flags last (what to watch for)
+
+### State Persistence
+- URL params (`?q=username`) for shareable links
+- SessionStorage for instant restoration on refresh
+- Both used together in `app/page.tsx`
+
+## Common Pitfalls
+
+### Avoid
+- Using `any` or `unknown` types
+- Mutating data structures (use `readonly`)
+- Forgetting `await` on async Supabase clients
+- Exposing service role key
+- Processing webhooks without signature verification
+- Charging credits before successful verification
+
+### Remember
+- Credit deduction happens AFTER successful verification
+- Webhooks need admin client (no user session)
+- API routes need `dynamic = 'force-dynamic'`
+- Comments explain why, not what
+
+## Git Workflow
+
+- Never commit `.env.local` (contains secrets)
+- Always commit `.env.example` (placeholder values)
+- Run `npm run build` before committing
+- Ensure tests pass: `npm test`
+

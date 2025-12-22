@@ -14,18 +14,11 @@ type ErrorResponse = {
 };
 
 /**
- * POST /api/checkout
+ * POST /api/checkout — creates Stripe Checkout session.
  *
- * Creates a Stripe Checkout session for purchasing credit packs.
- *
- * Flow:
- * 1. Authenticate user
- * 2. Validate credit pack selection
- * 3. Create Stripe Checkout session with metadata
- * 4. Return checkout URL
- *
- * Request body: { credits: number }
- * Response: { url: string } (Stripe Checkout URL)
+ * Why metadata? We store userId and credits in session metadata so the webhook
+ * can grant credits without needing to query our database during checkout.
+ * Stripe guarantees metadata is included in webhook events.
  */
 export async function POST(request: NextRequest) {
   try {

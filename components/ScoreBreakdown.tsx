@@ -9,8 +9,11 @@ interface ScoreBreakdownProps {
 }
 
 /**
- * Visual breakdown of trust score showing each factor's contribution.
- * Helps users understand why an account received its score.
+ * Factor-by-factor score transparency.
+ *
+ * Trust requires understanding. Users won't accept "trust us, score is 42"
+ * without knowing what went wrong. Each factor shows its contribution,
+ * enabling users to weigh signals differently based on their use case.
  */
 export const ScoreBreakdown = ({ breakdown, confidence }: ScoreBreakdownProps) => {
   const getStatusIcon = (status: string) => {

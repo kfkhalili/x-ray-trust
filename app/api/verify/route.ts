@@ -15,9 +15,11 @@ type ErrorResponse = {
 };
 
 /**
- * Fetches X account data from twitterapi.io.
- * Uses the /twitter/user/info endpoint as per https://docs.twitterapi.io/api-reference
- * Returns null if account not found or API error occurs.
+ * Fetches X account metadata from twitterapi.io.
+ *
+ * Returns null on any failure—the caller doesn't need to distinguish between
+ * "account doesn't exist" vs "API down" vs "rate limited". All are user-facing
+ * "account not found" messages to avoid leaking internal state.
  */
 const fetchXAccountData = async (username: string): Promise<XRawData | null> => {
   const apiKey = process.env.TWITTER_API_KEY;
@@ -122,8 +124,11 @@ const fetchXAccountData = async (username: string): Promise<XRawData | null> => 
 };
 
 /**
- * Deducts one credit from user's profile.
- * Returns true if deduction was successful, false if insufficient credits.
+ * Atomically deducts one credit using optimistic locking.
+ *
+ * Why optimistic locking? Race conditions between concurrent requests
+ * could double-spend credits. The WHERE clause checks the expected balance,
+ * failing if another request modified it first.
  */
 const deductCredit = async (userId: string): Promise<boolean> => {
   const supabase = await createClient();
@@ -154,23 +159,11 @@ const deductCredit = async (userId: string): Promise<boolean> => {
 };
 
 /**
- * POST /api/verify
+ * POST /api/verify — the core verification endpoint.
  *
- * Verifies the trustworthiness of an X (Twitter) account.
- *
- * Flow:
- * 1. Authenticate user via Supabase session
- * 2. Check if user has sufficient credits (> 0)
- * 3. Fetch account data from twitterapi.io
- * 4. Calculate trust score using trust engine
- * 5. Deduct 1 credit from user's balance
- * 6. Return trust report
- *
- * Errors:
- * - 401: Unauthenticated
- * - 402: Insufficient credits
- * - 404: Account not found
- * - 500: Server error
+ * Credit deduction happens AFTER successful verification, not before.
+ * This ensures users aren't charged for failed lookups (API errors,
+ * non-existent accounts). Only successful trust reports cost credits.
  */
 export async function POST(request: NextRequest) {
   try {

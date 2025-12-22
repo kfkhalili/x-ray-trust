@@ -1,135 +1,135 @@
-# X-Ray Trust MVP
+# X-Ray Trust
 
-A Micro SaaS MVP that verifies the trustworthiness of X (Twitter) accounts using metadata analysis from `twitterapi.io`.
+A Micro SaaS that verifies the trustworthiness of X (Twitter) accounts using behavioral signals and metadata analysis.
 
-## Features
+## Why X-Ray Trust?
 
-- **Trust Engine**: Pure functional scoring algorithm based on account age, listed count, and follower/following ratio
-- **Credit System**: Pay-per-verification model with Stripe integration
-- **Real-time Verification**: Instant trust score calculation with risk flag detection
-- **Security-First UI**: Dark mode interface with emerald/amber/rose color palette
+Social media impersonation and bot accounts are increasingly sophisticated. Traditional verification badges (Blue checkmarks) can be purchased, making them unreliable trust signals. X-Ray Trust analyzes behavioral patterns that are difficult for bots to fake: account longevity, organic follower growth, genuine engagement, and human curation (being added to lists).
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS
-- **Database/Auth**: Supabase
-- **Payments**: Stripe
-- **Icons**: Lucide React
-- **Type Safety**: Strict TypeScript (no `any`, no `unknown`)
+- **Next.js 16** — App Router with React 19
+- **Tailwind CSS 4** — Utility-first styling
+- **Supabase** — Auth & PostgreSQL with RLS
+- **Stripe** — Credit-based payment system
+- **twitterapi.io** — X account metadata source
+- **Jest** — Unit testing
 
-## Setup Instructions
-
-### 1. Install Dependencies
+## Quick Start
 
 ```bash
+# Install dependencies
 npm install
-```
 
-### 2. Environment Variables
-
-Copy `.env.example` to `.env.local` and fill in your credentials:
-
-```bash
+# Copy environment template
 cp .env.example .env.local
-```
 
-Required variables:
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (for webhooks)
-- `TWITTER_API_KEY`: Your twitterapi.io API key
-- `STRIPE_SECRET_KEY`: Your Stripe secret key
-- `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook signing secret
-- `NEXT_PUBLIC_APP_URL`: Your application URL (e.g., `http://localhost:3000`)
+# Start local Supabase (requires Docker)
+npx supabase start
 
-### 3. Supabase Setup
-
-1. Create a new Supabase project
-2. Run the SQL schema from `supabase/schema.sql` in your Supabase SQL editor
-3. Enable email authentication in Supabase Dashboard
-
-### 4. Stripe Setup
-
-1. Create a Stripe account and get your API keys
-2. Create Products and Prices in Stripe Dashboard for credit packs:
-   - 50 Credits - $5
-   - 120 Credits - $10
-   - 250 Credits - $20
-3. Update `lib/stripe.ts` with your actual Price IDs:
-   ```typescript
-   export const CREDIT_PACKS = new Map<string, number>([
-     ['price_xxxxx', 50],   // Replace with actual Price ID
-     ['price_yyyyy', 120],  // Replace with actual Price ID
-     ['price_zzzzz', 250],  // Replace with actual Price ID
-   ]);
-   ```
-4. Set up webhook endpoint in Stripe Dashboard:
-   - URL: `https://your-domain.com/api/webhook`
-   - Events: `checkout.session.completed`
-   - Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
-
-### 5. Twitter API Setup
-
-1. Sign up at [twitterapi.io](https://twitterapi.io)
-2. Get your API key
-3. Add it to `.env.local` as `TWITTER_API_KEY`
-
-### 6. Run Development Server
-
-```bash
+# Run development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+## Environment Setup
+
+See `.env.example` for required variables:
+
+| Variable                        | Purpose                           |
+| ------------------------------- | --------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL              |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase key               |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Server-side operations (webhooks) |
+| `TWITTER_API_KEY`               | twitterapi.io API key             |
+| `STRIPE_SECRET_KEY`             | Stripe server key                 |
+| `STRIPE_WEBHOOK_SECRET`         | Stripe webhook signing            |
+| `NEXT_PUBLIC_APP_URL`           | App URL for redirects             |
+
+## Trust Scoring Algorithm
+
+The scoring engine uses **5 behavioral signals** weighted by their reliability in detecting fake accounts:
+
+| Signal             | Weight | Why This Weight                                           |
+| ------------------ | ------ | --------------------------------------------------------- |
+| **Account Age**    | 25%    | New accounts are higher risk—building history takes time  |
+| **Follower Ratio** | 25%    | Bots follow aggressively; organic accounts earn followers |
+| **Activity**       | 25%    | Real users tweet; dormant accounts are suspicious         |
+| **Engagement**     | 15%    | Likes and media indicate genuine platform usage           |
+| **Listed Count**   | 10%    | Human curation signal (when available)                    |
+
+### Verdict Thresholds
+
+- **TRUSTED** (≥70): Strong positive signals across multiple factors
+- **CAUTION** (40-69): Mixed signals, proceed with care
+- **DANGER** (<40): Multiple red flags detected
+
+### Special Cases
+
+- **Automated accounts**: If `is_automated` flag is true, score is capped at 15 (DANGER)
+- **Missing data**: Factors default to neutral (50) when data is unavailable, with reduced confidence
 
 ## Project Structure
 
 ```
 ├── app/
 │   ├── api/
-│   │   ├── verify/route.ts      # Trust verification endpoint
-│   │   ├── checkout/route.ts    # Stripe checkout creation
-│   │   └── webhook/route.ts     # Stripe webhook handler
-│   ├── layout.tsx               # Root layout
-│   ├── page.tsx                 # Main landing page
-│   └── globals.css               # Global styles
+│   │   ├── verify/       # Trust verification endpoint
+│   │   ├── checkout/     # Stripe checkout creation
+│   │   └── webhook/      # Stripe webhook handler
+│   ├── page.tsx          # Main search interface
+│   └── globals.css       # Tailwind v4 imports
 ├── components/
-│   ├── RadialProgress.tsx       # Trust score visualization
-│   ├── TrustResults.tsx         # Results display component
-│   └── CreditModal.tsx          # Credit purchase modal
+│   ├── TrustResults.tsx  # Full results display
+│   ├── RadialProgress.tsx# Animated score circle
+│   ├── ScoreBreakdown.tsx# Factor-by-factor analysis
+│   ├── UserDetails.tsx   # Profile card
+│   ├── CreditModal.tsx   # Purchase modal
+│   └── AuthButton.tsx    # Login/logout
 ├── lib/
-│   ├── trust-engine.ts          # Pure functional trust calculation
-│   ├── stripe.ts                # Stripe configuration
-│   └── supabase/
-│       ├── server.ts            # Server-side Supabase client
-│       └── client.ts            # Client-side Supabase client
+│   ├── trust-engine.ts   # Pure scoring functions
+│   ├── stripe.ts         # Stripe config
+│   ├── supabase/
+│   │   ├── server.ts     # Server client (async cookies)
+│   │   ├── client.ts     # Browser client
+│   │   └── admin.ts      # Service role client
+│   └── __tests__/        # Unit tests
 ├── types/
-│   └── trust.ts                 # Domain model types
+│   └── trust.ts          # Domain types
+├── scripts/
+│   └── add-credits.ts    # Dev utility: add credits to user
 └── supabase/
-    └── schema.sql               # Database schema
+    └── schema.sql        # Database schema
 ```
 
-## Trust Scoring Algorithm
+## Development
 
-The trust engine calculates scores using weighted components:
+### Testing
 
-- **Account Age (40%)**: Newer accounts (< 30 days) are higher risk
-- **Listed Count (30%)**: Best signal of human curation (bots rarely get listed)
-- **Follower/Following Ratio (30%)**: Bots typically follow-back aggressively
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+```
 
-Verdict thresholds:
-- **TRUSTED**: Score ≥ 70
-- **CAUTION**: Score 40-69
-- **DANGER**: Score < 40
+### Adding Credits (Dev)
 
-## Development Notes
+```bash
+npx tsx scripts/add-credits.ts user@example.com 100
+```
 
-- **Functional Programming**: All transformations use pure functions, immutability, and array methods (`.map()`, `.filter()`, `.reduce()`)
-- **Type Safety**: Strict TypeScript with no `any` or `unknown` types
-- **Comments**: Explain **WHY** logic choices were made, not **WHAT** the code does
+### Local Stripe Webhooks
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhook
+```
+
+## Design Principles
+
+- **Pure Functions**: Trust calculations are stateless transformations
+- **Immutability**: All data types use `readonly` modifiers
+- **Type Safety**: Strict TypeScript, no `any` or type assertions
+- **Why-First Comments**: Comments explain reasoning, not mechanics
 
 ## License
 
 MIT
-

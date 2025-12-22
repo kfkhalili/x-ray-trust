@@ -2,8 +2,10 @@ import { differenceInDays } from 'date-fns';
 import type { XRawData, TrustReport, TrustVerdict, UserInfo, ScoreBreakdown } from '@/types/trust';
 
 /**
- * Calculates account age in days from creation date.
- * Returns 0 if date parsing fails to prevent division by zero errors.
+ * Calculates account age from creation timestamp.
+ *
+ * Returns 0 for invalid dates—this triggers maximum risk scoring
+ * since manipulated or missing creation dates are themselves red flags.
  */
 const calculateAccountAge = (createdAt: string): number => {
   const createdDate = new Date(createdAt);
@@ -18,9 +20,11 @@ const calculateAccountAge = (createdAt: string): number => {
 };
 
 /**
- * Account age score component (40% weight).
- * Newer accounts (< 30 days) are high risk, older accounts (> 2 years) are low risk.
- * Linear interpolation between these thresholds.
+ * Account age scoring (25% of total).
+ *
+ * Why this matters: Bots are created rapidly and burned frequently.
+ * Legitimate accounts accumulate history organically over years.
+ * A 2+ year account has survived multiple platform purges.
  */
 const scoreAccountAge = (ageInDays: number): number => {
   if (ageInDays === 0) {
@@ -48,10 +52,11 @@ const scoreAccountAge = (ageInDays: number): number => {
 };
 
 /**
- * Listed count score component (30% weight).
- * Listed count is the strongest signal of human curation - bots rarely get listed.
- * Accounts with 0 listings are suspicious, accounts with 10+ are highly trusted.
- * Returns neutral score (50) if data is unavailable.
+ * Listed count scoring (10% of total).
+ *
+ * Why this matters: Lists require human curation—someone actively organizing
+ * accounts by topic. Bots rarely earn list inclusions because they provide
+ * no value worth categorizing. Lower weight because data is often unavailable.
  */
 const scoreListedCount = (listedCount: number | undefined): number => {
   // If data unavailable, return neutral score
@@ -79,10 +84,11 @@ const scoreListedCount = (listedCount: number | undefined): number => {
 };
 
 /**
- * Follower/Following ratio score component.
- * Bots typically follow-back aggressively (high following, low followers).
- * Healthy accounts have ratios > 1.0 (more followers than following).
- * Returns neutral score (50) if data is unavailable.
+ * Follower/following ratio scoring (25% of total).
+ *
+ * Why this matters: Bots use follow-back schemes to inflate numbers,
+ * following thousands hoping for reciprocal follows. Organic accounts
+ * earn followers through content quality—ratio > 2.0 indicates influence.
  */
 const scoreFollowerRatio = (
   followersCount: number | undefined,
@@ -127,9 +133,11 @@ const scoreFollowerRatio = (
 };
 
 /**
- * Activity score component (tweet count).
- * Accounts with no tweets are highly suspicious.
- * Accounts with substantial tweet history indicate real usage.
+ * Activity scoring based on tweet count (25% of total).
+ *
+ * Why this matters: Real users tweet. Impersonator accounts are often
+ * created recently and lack posting history. A 2-year-old account with
+ * zero tweets is a major red flag—legitimate users don't stay silent.
  */
 const scoreActivity = (statusesCount: number | undefined, ageInDays: number): number => {
   if (statusesCount === undefined) {
@@ -167,8 +175,11 @@ const scoreActivity = (statusesCount: number | undefined, ageInDays: number): nu
 };
 
 /**
- * Engagement score component (media and favourites).
- * Real users engage with content. Bots rarely like or post media.
+ * Engagement scoring via media posts and likes (15% of total).
+ *
+ * Why this matters: Genuine users interact with the platform beyond text.
+ * Posting images/videos and liking content requires human judgment.
+ * Bots automate text but rarely curate visual content authentically.
  */
 const scoreEngagement = (
   mediaCount: number | undefined,
@@ -201,16 +212,21 @@ const scoreEngagement = (
 };
 
 /**
- * Detects impersonator patterns: verified accounts that are too new.
- * Legitimate verified accounts are typically established, not created recently.
+ * Detects impersonator pattern: verified badge on very new account.
+ *
+ * Why this matters: Since verification became purchasable, impersonators
+ * create fresh accounts, buy the badge, and immediately start scamming.
+ * Legitimate verified accounts predate their verification.
  */
 const detectImpersonator = (ageInDays: number, blueVerified: boolean): boolean => {
   return blueVerified && ageInDays < 30;
 };
 
 /**
- * Generates human-readable risk flags based on detected patterns.
- * Returns immutable array of flag descriptions.
+ * Generates human-readable risk flags explaining specific concerns.
+ *
+ * Flags provide transparency—users understand WHY a score is low,
+ * not just that it IS low. Enables informed decision-making.
  */
 const generateFlags = (data: XRawData, ageInDays: number): readonly string[] => {
   const flags: string[] = [];
@@ -269,8 +285,11 @@ const generateFlags = (data: XRawData, ageInDays: number): readonly string[] => 
 };
 
 /**
- * Maps numeric score (0-100) to categorical verdict.
- * Thresholds chosen to balance false positives vs false negatives.
+ * Converts numeric score to categorical verdict.
+ *
+ * Thresholds tuned to minimize false negatives (missing real threats)
+ * while accepting some false positives (legitimate accounts flagged).
+ * Users can investigate CAUTION cases; DANGER should be avoided.
  */
 const scoreToVerdict = (score: number): TrustVerdict => {
   if (score >= 70) {
@@ -285,22 +304,16 @@ const scoreToVerdict = (score: number): TrustVerdict => {
 };
 
 /**
- * Pure function that transforms raw X account data into a trust assessment.
+ * Pure function: raw X account data → trust assessment.
  *
- * Enhanced scoring with multiple signals:
- * - Account Age: 25% (newer = riskier)
- * - Follower/Following Ratio: 25% (bots follow-back aggressively)
- * - Activity (Tweet Count): 25% (real users post content)
- * - Engagement: 15% (media and likes indicate real usage)
- * - Listed Count: 10% (human curation signal, but often unavailable)
+ * Why these weights?
+ * - Age, Ratio, Activity (25% each): Hardest for bots to fake—require time
+ * - Engagement (15%): Useful signal but easier to automate
+ * - Listed (10%): Excellent signal when present, but often unavailable
  *
- * Special handling:
- * - Automated accounts get maximum penalty
- * - Very low follower counts are penalized
- * - No activity is heavily penalized
- *
- * @param data - Raw account metadata from twitterapi.io
- * @returns Immutable TrustReport with score, verdict, and risk flags
+ * Why automated accounts get 15 score cap?
+ * X explicitly marks automation. If the platform itself says "this is a bot",
+ * we trust that signal absolutely—no amount of other metrics overrides it.
  */
 export const calculateTrust = (data: XRawData): TrustReport => {
   const ageInDays = calculateAccountAge(data.created_at);

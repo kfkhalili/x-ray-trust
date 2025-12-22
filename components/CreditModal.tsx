@@ -10,8 +10,11 @@ interface CreditModalProps {
 }
 
 /**
- * Modal for purchasing credit packs via Stripe Checkout.
- * Displays available credit packs and handles checkout session creation.
+ * Credit purchase modal with Stripe Checkout integration.
+ *
+ * Why redirect to Stripe? We don't handle payment forms—Stripe does.
+ * Redirecting to Stripe Checkout keeps PCI compliance on Stripe's side,
+ * not ours. After payment, webhook grants credits automatically.
  */
 export const CreditModal = ({ isOpen, onClose, currentCredits }: CreditModalProps) => {
   const [loading, setLoading] = useState(false);
