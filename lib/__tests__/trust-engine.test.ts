@@ -34,14 +34,14 @@ describe('Trust Engine', () => {
     it('should give high score to old accounts', () => {
       const oldDate = new Date();
       oldDate.setFullYear(oldDate.getFullYear() - 3); // 3 years old
-      
+
       const data: XRawData = {
         ...baseData,
         created_at: oldDate.toISOString(),
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.score).toBeGreaterThan(70);
       expect(report.verdict).toBe('TRUSTED');
     });
@@ -49,7 +49,7 @@ describe('Trust Engine', () => {
     it('should give low score to very new accounts', () => {
       const newDate = new Date();
       newDate.setDate(newDate.getDate() - 10); // 10 days old
-      
+
       const data: XRawData = {
         ...baseData,
         created_at: newDate.toISOString(),
@@ -61,7 +61,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.score).toBeLessThan(50);
       expect(report.flags.some(flag => flag.includes('less than 30 days old'))).toBe(true);
     });
@@ -77,7 +77,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.score).toBeGreaterThan(60);
     });
 
@@ -90,7 +90,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('bot-like pattern'))).toBe(true);
     });
 
@@ -103,7 +103,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('Very low follower count'))).toBe(true);
     });
   });
@@ -117,7 +117,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.score).toBeGreaterThan(60);
     });
 
@@ -129,14 +129,14 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('never posted a tweet'))).toBe(true);
     });
 
     it('should flag accounts with very low activity', () => {
       const oldDate = new Date();
       oldDate.setMonth(oldDate.getMonth() - 2); // 2 months old
-      
+
       const data: XRawData = {
         ...baseData,
         statuses_count: 5,
@@ -144,7 +144,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('Very low tweet count'))).toBe(true);
     });
   });
@@ -159,7 +159,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.score).toBeGreaterThan(60);
     });
 
@@ -172,7 +172,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('low engagement') || flag.includes('No engagement'))).toBe(true);
     });
   });
@@ -180,20 +180,20 @@ describe('Trust Engine', () => {
   describe('Score breakdown', () => {
     it('should include breakdown in report', () => {
       const report = calculateTrust(baseData);
-      
+
       expect(report.breakdown).toBeDefined();
       expect(report.breakdown?.length).toBe(5);
-      expect(report.breakdown?.every(factor => 
-        factor.factor && 
-        typeof factor.score === 'number' && 
-        factor.score >= 0 && 
+      expect(report.breakdown?.every(factor =>
+        factor.factor &&
+        typeof factor.score === 'number' &&
+        factor.score >= 0 &&
         factor.score <= 100
       )).toBe(true);
     });
 
     it('should calculate correct contribution for each factor', () => {
       const report = calculateTrust(baseData);
-      
+
       if (report.breakdown) {
         report.breakdown.forEach(factor => {
           const expectedContribution = Math.round(factor.score * factor.weight);
@@ -207,14 +207,14 @@ describe('Trust Engine', () => {
     it('should identify well-established accounts', () => {
       const oldDate = new Date();
       oldDate.setFullYear(oldDate.getFullYear() - 2);
-      
+
       const data: XRawData = {
         ...baseData,
         created_at: oldDate.toISOString(),
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.positiveIndicators).toBeDefined();
       expect(report.positiveIndicators?.some(ind => ind.includes('Well-established'))).toBe(true);
     });
@@ -226,7 +226,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.positiveIndicators?.some(ind => ind.includes('Verified'))).toBe(true);
     });
 
@@ -237,7 +237,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.positiveIndicators?.some(ind => ind.includes('Active posting'))).toBe(true);
     });
   });
@@ -245,7 +245,7 @@ describe('Trust Engine', () => {
   describe('Confidence calculation', () => {
     it('should calculate confidence based on available data', () => {
       const report = calculateTrust(baseData);
-      
+
       expect(report.confidence).toBeDefined();
       expect(report.confidence).toBeGreaterThanOrEqual(0);
       expect(report.confidence).toBeLessThanOrEqual(100);
@@ -271,7 +271,7 @@ describe('Trust Engine', () => {
 
       const fullReport = calculateTrust(fullData);
       const minimalReport = calculateTrust(minimalData);
-      
+
       expect(fullReport.confidence).toBeGreaterThan(minimalReport.confidence || 0);
     });
   });
@@ -289,7 +289,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.verdict).toBe('TRUSTED');
     });
 
@@ -303,7 +303,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       // Score should be in CAUTION range
       if (report.score >= 40 && report.score < 70) {
         expect(report.verdict).toBe('CAUTION');
@@ -320,7 +320,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.verdict).toBe('DANGER');
     });
   });
@@ -334,7 +334,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(minimalData);
-      
+
       expect(report).toBeDefined();
       expect(report.score).toBeGreaterThanOrEqual(0);
       expect(report.score).toBeLessThanOrEqual(100);
@@ -348,7 +348,7 @@ describe('Trust Engine', () => {
       };
 
       const report = calculateTrust(data);
-      
+
       expect(report.flags.some(flag => flag.includes('Unable to verify'))).toBe(true);
     });
   });
