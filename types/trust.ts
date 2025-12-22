@@ -1,15 +1,19 @@
 /**
  * Raw data structure from twitterapi.io /twitter/user/info endpoint.
  * All fields are readonly to enforce immutability in functional transformations.
- * Note: followers_count, friends_count, and listed_count may be unavailable from user_about endpoint.
  */
 export type XRawData = {
   readonly id: string;
   readonly created_at: string;
-  readonly followers_count?: number; // Optional - not available in user_about endpoint
-  readonly friends_count?: number; // Optional - not available in user_about endpoint
-  readonly listed_count?: number; // Optional - not available in user_about endpoint
+  readonly followers_count?: number;
+  readonly friends_count?: number;
+  readonly listed_count?: number; // Not available in /twitter/user/info endpoint
   readonly blue_verified: boolean;
+  readonly statuses_count?: number; // Tweet count - indicates activity
+  readonly media_count?: number; // Media posts - indicates engagement
+  readonly favourites_count?: number; // Likes given - indicates engagement
+  readonly is_automated?: boolean; // Direct bot indicator
+  readonly protected?: boolean; // Private account
   readonly _userInfo?: UserInfo; // Internal field for passing user info to trust report
 };
 
@@ -37,6 +41,18 @@ export interface UserInfo {
 }
 
 /**
+ * Score breakdown showing contribution of each factor.
+ */
+export interface ScoreBreakdown {
+  readonly factor: string;
+  readonly score: number; // 0-100
+  readonly weight: number; // 0-1, contribution to final score
+  readonly contribution: number; // Actual contribution (score * weight)
+  readonly status: 'positive' | 'neutral' | 'negative';
+  readonly explanation: string;
+}
+
+/**
  * Complete trust assessment report containing score, verdict, and risk flags.
  * Flags are immutable array of human-readable risk indicators.
  */
@@ -45,4 +61,7 @@ export interface TrustReport {
   readonly score: number; // 0-100, where 100 is most trustworthy
   readonly verdict: TrustVerdict;
   readonly flags: readonly string[];
+  readonly breakdown?: readonly ScoreBreakdown[]; // Optional score breakdown
+  readonly positiveIndicators?: readonly string[]; // What's good about the account
+  readonly confidence?: number; // 0-100, how confident we are in the assessment
 }

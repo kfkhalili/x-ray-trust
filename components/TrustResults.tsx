@@ -2,8 +2,9 @@
 
 import { RadialProgress } from './RadialProgress';
 import { UserDetails } from './UserDetails';
+import { ScoreBreakdown } from './ScoreBreakdown';
 import type { TrustReport } from '@/types/trust';
-import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, TrendingUp } from 'lucide-react';
 
 interface TrustResultsProps {
   report: TrustReport;
@@ -60,6 +61,32 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
         </div>
       </div>
 
+      {/* Score Breakdown */}
+      {report.breakdown && (
+        <ScoreBreakdown breakdown={report.breakdown} confidence={report.confidence} />
+      )}
+
+      {/* Positive Indicators */}
+      {report.positiveIndicators && report.positiveIndicators.length > 0 && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 backdrop-blur-sm">
+          <h3 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
+            Positive Indicators
+          </h3>
+          <ul className="space-y-2">
+            {report.positiveIndicators.map((indicator, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-3 text-gray-300 text-sm"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span>{indicator}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Risk Flags */}
       {report.flags.length > 0 && (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm">
@@ -82,7 +109,7 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
       )}
 
       {/* No Flags Message */}
-      {report.flags.length === 0 && (
+      {report.flags.length === 0 && !report.positiveIndicators && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6">
           <div className="flex items-center gap-3 text-emerald-400">
             <CheckCircle2 className="w-5 h-5" />

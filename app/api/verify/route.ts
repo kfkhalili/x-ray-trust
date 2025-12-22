@@ -64,6 +64,11 @@ const fetchXAccountData = async (username: string): Promise<XRawData | null> => 
         following?: number;
         profilePicture?: string;
         description?: string;
+        statusesCount?: number;
+        mediaCount?: number;
+        favouritesCount?: number;
+        isAutomated?: boolean;
+        protected?: boolean;
       };
     };
 
@@ -78,16 +83,19 @@ const fetchXAccountData = async (username: string): Promise<XRawData | null> => 
       const userData = apiResponse.data;
 
       // Map API response to XRawData format
-      // The /twitter/user/info endpoint provides followers and following counts
-      // Note: listed_count is not available in this endpoint, so it remains optional
+      // The /twitter/user/info endpoint provides comprehensive user data
       const data: XRawData = {
         id: userData.id,
         created_at: userData.createdAt,
         blue_verified: userData.isBlueVerified || false,
         followers_count: userData.followers,
         friends_count: userData.following,
-        // listed_count is not available in /twitter/user/info endpoint
-        listed_count: undefined,
+        listed_count: undefined, // Not available in /twitter/user/info endpoint
+        statuses_count: userData.statusesCount,
+        media_count: userData.mediaCount,
+        favourites_count: userData.favouritesCount,
+        is_automated: userData.isAutomated,
+        protected: userData.protected,
         // Store additional user info for display
         _userInfo: {
           id: userData.id,

@@ -23,8 +23,30 @@ export default function Home() {
 
   const supabase = createClient();
 
-  // Load user session and credits on mount
+  // Load user session, credits, and restore search state on mount
   useEffect(() => {
+    // Restore username from URL params
+    const params = new URLSearchParams(window.location.search);
+    const urlUsername = params.get('q');
+    if (urlUsername) {
+      setUsername(urlUsername);
+    }
+
+    // Restore report from sessionStorage if available
+    const storedReport = sessionStorage.getItem('lastTrustReport');
+    if (storedReport) {
+      try {
+        const parsedReport = JSON.parse(storedReport) as TrustReport;
+        // Only restore if it matches the current search
+        if (urlUsername && parsedReport.userInfo.username.toLowerCase() === urlUsername.toLowerCase().replace(/^@+/, '')) {
+          setReport(parsedReport);
+        }
+      } catch (e) {
+        // Invalid stored data, ignore
+        sessionStorage.removeItem('lastTrustReport');
+      }
+    }
+
     const loadUser = async () => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -148,6 +170,14 @@ export default function Home() {
       setReport(trustReport);
       setLoading(false);
 
+      // Update URL with search query
+      const url = new URL(window.location.href);
+      url.searchParams.set('q', cleanUsername);
+      window.history.pushState({}, '', url.toString());
+
+      // Store report in sessionStorage for persistence
+      sessionStorage.setItem('lastTrustReport', JSON.stringify(trustReport));
+
       // Refresh credits asynchronously in the background (don't block UI)
       if (user) {
         supabase
@@ -155,14 +185,14 @@ export default function Home() {
           .select('credits')
           .eq('id', user.id)
           .single()
-          .then(({ data: profile }) => {
+          .then(({ data: profile, error }) => {
+            if (error) {
+              console.error('Failed to refresh credits:', error);
+              return;
+            }
             if (profile) {
               setCredits(profile.credits);
             }
-          })
-          .catch((err) => {
-            // Silently fail - credits will refresh on next action
-            console.error('Failed to refresh credits:', err);
           });
       }
     } catch (err) {
