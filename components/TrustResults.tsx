@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { RadialProgress } from './RadialProgress';
-import { UserDetails } from './UserDetails';
-import { ScoreBreakdown } from './ScoreBreakdown';
-import type { TrustReport } from '@/types/trust';
-import { AlertTriangle, CheckCircle2, XCircle, TrendingUp } from 'lucide-react';
+import { RadialProgress } from "./RadialProgress";
+import { UserDetails } from "./UserDetails";
+import { ScoreBreakdown } from "./ScoreBreakdown";
+import type { TrustReport } from "@/types/trust";
+import { AlertTriangle, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
 
 interface TrustResultsProps {
   report: TrustReport;
@@ -17,22 +17,22 @@ interface TrustResultsProps {
 export const TrustResults = ({ report }: TrustResultsProps) => {
   const verdictConfig = {
     TRUSTED: {
-      label: 'Trusted',
+      label: "Trusted",
       icon: CheckCircle2,
-      color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      bgColor: 'bg-emerald-500/5',
+      color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      bgColor: "bg-emerald-500/5",
     },
     CAUTION: {
-      label: 'Caution',
+      label: "Caution",
       icon: AlertTriangle,
-      color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      bgColor: 'bg-amber-500/5',
+      color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      bgColor: "bg-amber-500/5",
     },
     DANGER: {
-      label: 'Danger',
+      label: "Danger",
       icon: XCircle,
-      color: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-      bgColor: 'bg-rose-500/5',
+      color: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+      bgColor: "bg-rose-500/5",
     },
   };
 
@@ -50,7 +50,8 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
           <RadialProgress score={report.score} verdict={report.verdict} />
 
           <div className="text-center space-y-2">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${config.color}`}>
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${config.color}`}>
               <Icon className="w-4 h-4" />
               <span className="font-semibold text-sm">{config.label}</span>
             </div>
@@ -63,7 +64,10 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
 
       {/* Score Breakdown */}
       {report.breakdown && (
-        <ScoreBreakdown breakdown={report.breakdown} confidence={report.confidence} />
+        <ScoreBreakdown
+          breakdown={report.breakdown}
+          confidence={report.confidence}
+        />
       )}
 
       {/* Positive Indicators */}
@@ -77,9 +81,8 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
             {report.positiveIndicators.map((indicator, index) => (
               <li
                 key={index}
-                className="flex items-start gap-3 text-gray-300 text-sm"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                className="flex items-start gap-3 text-gray-300 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
                 <span>{indicator}</span>
               </li>
             ))}
@@ -98,8 +101,7 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
             {report.flags.map((flag, index) => (
               <li
                 key={index}
-                className="flex items-start gap-3 text-gray-300 text-sm"
-              >
+                className="flex items-start gap-3 text-gray-300 text-sm">
                 <span className="text-rose-400 mt-0.5">•</span>
                 <span>{flag}</span>
               </li>
@@ -120,4 +122,3 @@ export const TrustResults = ({ report }: TrustResultsProps) => {
     </div>
   );
 };
-
