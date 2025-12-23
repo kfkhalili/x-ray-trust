@@ -85,9 +85,13 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 
 1. **Set primary currency to EUR** in Stripe Dashboard
 2. **Enable Stripe Tax** (handles VAT automatically if you switch later)
-3. **Configure tax rates:**
+3. **Set Tax Category for Products**: **"General - Electronically supplied services"** (`txcd_10301001`)
+   - This is the standard category for digital services/SaaS
+   - Set this on each product when creating them
+   - Important for proper EU VAT compliance when you switch from Kleinunternehmerregelung
+4. **Configure tax rates:**
    - Germany: 19% VAT (if not using Kleinunternehmerregelung)
-   - EU countries: Varies (Stripe Tax handles this)
+   - EU countries: Varies (Stripe Tax handles this automatically)
 
 ### Statement Descriptor (Required)
 

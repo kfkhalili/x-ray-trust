@@ -69,6 +69,9 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
   - Type: **One-time**
   - Price: **€4.99 EUR**
   - Billing: **One time**
+- **Tax Category**: **General - Electronically supplied services** (or `txcd_10301001`)
+  - This is the standard tax category for digital services/SaaS in Stripe
+  - Important for EU VAT compliance when you switch from Kleinunternehmerregelung
 - Click **Save product**
 - **Copy the Price ID** (starts with `price_...`)
 
@@ -80,6 +83,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
   - Type: **One-time**
   - Price: **€9.99 EUR**
   - Billing: **One time**
+- **Tax Category**: **General - Electronically supplied services** (or `txcd_10301001`)
 - Click **Save product**
 - **Copy the Price ID**
 
@@ -91,6 +95,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
   - Type: **One-time**
   - Price: **€19.99 EUR**
   - Billing: **One time**
+- **Tax Category**: **General - Electronically supplied services** (or `txcd_10301001`)
 - Click **Save product**
 - **Copy the Price ID**
 
@@ -159,9 +164,13 @@ The statement descriptor is what appears on your customer's credit card statemen
 
 **Tax Settings:**
 
-- If using Kleinunternehmerregelung: No VAT (see GERMAN_LAUNCH_GUIDE.md)
-- If registered for VAT: Enable Stripe Tax (handles 19% VAT automatically)
-- Stripe Tax can handle EU VAT automatically if needed
+- **Tax Category for Products**: Set to **"General - Electronically supplied services"** (`txcd_10301001`)
+  - This is the standard category for digital services/SaaS
+  - Required for proper EU VAT handling when you switch from Kleinunternehmerregelung
+  - Set this on each product when creating them in Stripe Dashboard
+- If using Kleinunternehmerregelung: No VAT charged (see GERMAN_LAUNCH_GUIDE.md)
+- If registered for VAT: Enable Stripe Tax (handles 19% VAT automatically for Germany)
+- Stripe Tax can handle EU VAT automatically if needed (different rates per country)
 
 **Currency:**
 
