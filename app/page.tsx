@@ -99,7 +99,7 @@ export default function Home() {
         setUser(currentUser);
 
         // Fetch credits
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('credits')
           .eq('id', currentUser.id)
@@ -107,6 +107,13 @@ export default function Home() {
 
         if (profile) {
           setCredits(profile.credits);
+        } else if (profileError && profileError.code === 'PGRST116') {
+          // Profile doesn't exist (404) - trigger should have created it
+          // This can happen if the trigger wasn't set up or user was created before trigger
+          // Default to 0 credits and let the user know they need to contact support
+          // or we could create it here, but that requires INSERT permission
+          setCredits(0);
+          console.warn('Profile not found for user:', currentUser.id, '- trigger may not have run');
         }
       } else {
         // For unauthenticated users, check remaining free lookups from server
@@ -144,7 +151,7 @@ export default function Home() {
         if (session?.user) {
           setUser(session.user);
 
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('credits')
             .eq('id', session.user.id)
@@ -152,6 +159,9 @@ export default function Home() {
 
           if (profile) {
             setCredits(profile.credits);
+          } else if (profileError && profileError.code === 'PGRST116') {
+            // Profile doesn't exist - default to 0 credits
+            setCredits(0);
           }
         } else {
           setUser(null);
@@ -178,9 +188,12 @@ export default function Home() {
           .select('credits')
           .eq('id', user.id)
           .single()
-          .then(({ data: profile }) => {
+          .then(({ data: profile, error: profileError }) => {
             if (profile) {
               setCredits(profile.credits);
+            } else if (profileError && profileError.code === 'PGRST116') {
+              // Profile doesn't exist - default to 0 credits
+              setCredits(0);
             }
           });
       }
@@ -257,9 +270,14 @@ export default function Home() {
           .eq('id', user.id)
           .single()
       )
-        .then(({ data: profile, error }) => {
+          .then(({ data: profile, error }) => {
           if (error) {
-            console.error('Failed to refresh credits:', error);
+            if (error.code === 'PGRST116') {
+              // Profile doesn't exist - default to 0 credits
+              setCredits(0);
+            } else {
+              console.error('Failed to refresh credits:', error);
+            }
             return;
           }
           if (profile) {
