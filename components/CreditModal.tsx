@@ -76,7 +76,7 @@ export const CreditModal = ({
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-100">
-              Sign In Required
+              Buy More Lookups
             </h2>
             <button
               onClick={onClose}
@@ -88,7 +88,7 @@ export const CreditModal = ({
           {/* Message */}
           <div className="bg-gray-800/50 rounded-lg p-4">
             <p className="text-gray-300 text-sm">
-              You've used all 3 free lookups. Sign in to purchase credits and
+              You've used all 3 free lookups. Sign in to purchase credits starting from €4.99 and
               continue verifying accounts.
             </p>
           </div>

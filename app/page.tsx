@@ -159,6 +159,15 @@ export default function Home() {
       setTimeout(loadUser, 500);
       // Clean the URL param
       window.history.replaceState({}, "", window.location.pathname);
+      
+      // If user wanted to buy credits, auto-open modal after sign-in
+      const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
+      if (shouldOpenCredits) {
+        setTimeout(() => {
+          sessionStorage.removeItem("openCreditsAfterSignIn");
+          setShowCreditModal(true);
+        }, 1000); // Wait for user and credits to load
+      }
     }
 
     // Listen for auth changes
@@ -166,6 +175,7 @@ export default function Home() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        const wasUnauthenticated = !user; // Track if user just signed in
         setUser(session.user);
         // Clear free lookups when user authenticates (they use credits now)
         setFreeLookupsRemaining(null);
@@ -182,6 +192,18 @@ export default function Home() {
         } else if (profileError && profileError.code === "PGRST116") {
           // Profile doesn't exist - default to 0 credits
           setCredits(0);
+        }
+
+        // If user just signed in and they wanted to buy credits, auto-open modal
+        if (wasUnauthenticated) {
+          const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
+          if (shouldOpenCredits) {
+            sessionStorage.removeItem("openCreditsAfterSignIn");
+            // Small delay to ensure credits are loaded
+            setTimeout(() => {
+              setShowCreditModal(true);
+            }, 300);
+          }
         }
       } else {
         setUser(null);
@@ -391,9 +413,13 @@ export default function Home() {
             </div>
             {freeLookupsRemaining === 0 && (
               <button
-                onClick={() => setShowCreditModal(true)}
+                onClick={() => {
+                  setShowCreditModal(true);
+                  // Track that user wants to buy credits - will auto-open modal after sign-in
+                  sessionStorage.setItem("openCreditsAfterSignIn", "true");
+                }}
                 className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                Sign In to Continue
+                Buy More Lookups
               </button>
             )}
           </div>
