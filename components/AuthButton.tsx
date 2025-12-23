@@ -11,7 +11,7 @@ import { LogIn, LogOut, User } from 'lucide-react';
  * is built-in. Users click link in email → authenticated. Simpler UX, better security.
  */
 export const AuthButton = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ email?: string } | null>(null);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -46,24 +46,20 @@ export const AuthButton = () => {
     setLoading(true);
     setMessage(null);
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}`,
-        },
-      });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}`,
+      },
+    });
 
-      if (error) {
-        setMessage(error.message);
-      } else {
-        setMessage('Check your email for the login link!');
-      }
-    } catch (err) {
-      setMessage('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage('Check your email for the login link!');
     }
+
+    setLoading(false);
   };
 
   const handleSignOut = async () => {

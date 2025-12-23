@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { stripe } from '@/lib/stripe';
 import Stripe from 'stripe';
+import { Result, ok, err } from 'neverthrow';
 
 // Mark route as dynamic to prevent build-time analysis
 export const dynamic = 'force-dynamic';
@@ -12,28 +13,30 @@ export const dynamic = 'force-dynamic';
  * Why verify? Anyone can POST to this endpoint. Without signature verification,
  * attackers could send fake "payment succeeded" events and grant themselves credits.
  * Stripe's signature proves the event came from Stripe's servers.
+ *
+ * Returns Result type instead of null - functional error handling.
  */
 const verifyWebhookSignature = async (
   request: NextRequest
-): Promise<Stripe.Event | null> => {
+): Promise<Result<Stripe.Event, Error>> => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    return null;
+    return err(new Error('STRIPE_WEBHOOK_SECRET not configured'));
   }
 
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
-    return null;
+    return err(new Error('Missing stripe-signature header'));
   }
 
   try {
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    return event;
-  } catch {
-    return null;
+    return ok(event);
+  } catch (error) {
+    return err(error instanceof Error ? error : new Error('Invalid webhook signature'));
   }
 };
 
@@ -43,15 +46,17 @@ const verifyWebhookSignature = async (
  * Why admin client? Webhooks run server-to-server without user session cookies.
  * RLS would block these requests. Admin client bypasses RLS because we've
  * already verified the payment via Stripe signature.
+ *
+ * Returns Result type instead of boolean - functional error handling.
  */
-const addCreditsToUser = async (userId: string, credits: number): Promise<boolean> => {
-  // Validate env vars at runtime
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    console.error('Missing Supabase configuration');
-    return false;
+const addCreditsToUser = async (userId: string, credits: number): Promise<Result<void, Error>> => {
+  const adminClientResult = createAdminClient();
+
+  if (adminClientResult.isErr()) {
+    return err(adminClientResult.error);
   }
 
-  const supabase = createAdminClient();
+  const supabase = adminClientResult.value;
 
   // Get current credits
   const { data: profile, error: fetchError } = await supabase
@@ -61,7 +66,7 @@ const addCreditsToUser = async (userId: string, credits: number): Promise<boolea
     .single();
 
   if (fetchError || !profile) {
-    return false;
+    return err(new Error(`Failed to fetch profile: ${fetchError?.message ?? 'Profile not found'}`));
   }
 
   // Atomic increment
@@ -70,7 +75,11 @@ const addCreditsToUser = async (userId: string, credits: number): Promise<boolea
     .update({ credits: profile.credits + credits })
     .eq('id', userId);
 
-  return !updateError;
+  if (updateError) {
+    return err(new Error(`Failed to update credits: ${updateError.message}`));
+  }
+
+  return ok(undefined);
 };
 
 /**
@@ -81,14 +90,16 @@ const addCreditsToUser = async (userId: string, credits: number): Promise<boolea
  * and focused on the credit-granting use case.
  */
 export async function POST(request: NextRequest) {
-  const event = await verifyWebhookSignature(request);
+  const eventResult = await verifyWebhookSignature(request);
 
-  if (!event) {
+  if (eventResult.isErr()) {
     return NextResponse.json(
-      { error: 'Invalid signature' },
+      { error: 'Invalid signature', details: eventResult.error.message },
       { status: 400 }
     );
   }
+
+  const event = eventResult.value;
 
   // Handle successful payment
   if (event.type === 'checkout.session.completed') {
@@ -115,12 +126,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const success = await addCreditsToUser(userId, credits);
+    const addCreditsResult = await addCreditsToUser(userId, credits);
 
-    if (!success) {
-      console.error('Failed to add credits to user:', userId);
+    if (addCreditsResult.isErr()) {
+      console.error('Failed to add credits to user:', userId, addCreditsResult.error.message);
       return NextResponse.json(
-        { error: 'Failed to update credits' },
+        { error: 'Failed to update credits', details: addCreditsResult.error.message },
         { status: 500 }
       );
     }
