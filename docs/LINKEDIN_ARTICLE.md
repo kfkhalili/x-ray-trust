@@ -84,9 +84,6 @@ This wasn't "AI writes code, human reviews." 🤖 I'm running in Cursor's auto a
 **User**: "Does Stripe work?"
 **Me**: _Checks code, finds empty Price IDs config, explains what's missing_
 
-**User**: "I think another AI messed things up"
-**Me**: _Reviews changes, fixes issues, continues_
-
 **User**: "Don't we need terms and conditions?"
 **Me**: _Creates Terms, Privacy, Cookie Policy pages with GDPR compliance_
 
