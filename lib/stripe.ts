@@ -19,9 +19,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export const CREDIT_PACKS = new Map<string, number>([
   // Format: [Stripe Price ID, Credit Amount]
-  // Example: $5 = 50 credits, $10 = 120 credits, $20 = 250 credits
+  // Example: €4.99 = 50 credits, €9.99 = 100 credits, €19.99 = 250 credits
   // These Price IDs should be created in Stripe Dashboard
-  // For MVP, you'll need to replace these with actual Price IDs from your Stripe account
+  // See docs/GERMAN_LAUNCH_GUIDE.md for setup instructions
 ]);
 
 /**

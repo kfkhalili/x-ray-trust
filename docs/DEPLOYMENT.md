@@ -41,9 +41,9 @@ This guide walks you through deploying X-Ray Trust to production using free tier
 
 1. Go to Stripe Dashboard → Products
 2. Create 3 products:
-   - **50 Credits** - $5.00 (one-time payment)
-   - **120 Credits** - $10.00 (one-time payment)
-   - **250 Credits** - $20.00 (one-time payment)
+   - **50 Credits** - €4.99 (one-time payment)
+   - **100 Credits** - €9.99 (one-time payment)
+   - **250 Credits** - €19.99 (one-time payment)
 3. Copy the **Price IDs** (start with `price_...`)
 
 ### 2.2 Update Code with Price IDs
@@ -52,9 +52,9 @@ Edit `lib/stripe.ts`:
 
 ```typescript
 export const CREDIT_PACKS = new Map<string, number>([
-  ['price_YOUR_50_CREDITS_ID', 50],
-  ['price_YOUR_120_CREDITS_ID', 120],
-  ['price_YOUR_250_CREDITS_ID', 250],
+  ['price_YOUR_50_CREDITS_ID', 50],   // €4.99
+  ['price_YOUR_100_CREDITS_ID', 100], // €9.99
+  ['price_YOUR_250_CREDITS_ID', 250], // €19.99
 ]);
 ```
 
