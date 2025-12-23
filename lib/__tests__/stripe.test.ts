@@ -6,7 +6,7 @@ describe('Stripe Utilities', () => {
       // Get the first price ID from CREDIT_PACKS
       const credits = Array.from(CREDIT_PACKS.values())[0];
       const priceId = getPriceIdForCredits(credits);
-      
+
       expect(priceId).toBeDefined();
       expect(typeof priceId).toBe('string');
     });
@@ -32,7 +32,7 @@ describe('Stripe Utilities', () => {
       // Get the first price ID from CREDIT_PACKS
       const priceId = Array.from(CREDIT_PACKS.keys())[0];
       const credits = getCreditsForPriceId(priceId);
-      
+
       expect(credits).toBeDefined();
       expect(typeof credits).toBe('number');
       expect(credits).toBeGreaterThan(0);
@@ -72,7 +72,7 @@ describe('Stripe Utilities', () => {
       for (const [priceId, credits] of CREDIT_PACKS.entries()) {
         const retrievedPriceId = getPriceIdForCredits(credits);
         const retrievedCredits = getCreditsForPriceId(priceId);
-        
+
         expect(retrievedPriceId).toBe(priceId);
         expect(retrievedCredits).toBe(credits);
       }
