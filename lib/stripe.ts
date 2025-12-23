@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 /**
  * Stripe client for server-side payment operations.
@@ -19,11 +19,11 @@ export const stripe = (): Stripe => {
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY must be set');
+    throw new Error("STRIPE_SECRET_KEY must be set");
   }
 
   stripeInstance = new Stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
+    apiVersion: "2025-12-15.clover",
   });
 
   return stripeInstance;
@@ -41,6 +41,9 @@ export const CREDIT_PACKS = new Map<string, number>([
   // Example: €4.99 = 50 credits, €9.99 = 100 credits, €19.99 = 250 credits
   // These Price IDs should be created in Stripe Dashboard
   // See docs/GERMAN_LAUNCH_GUIDE.md for setup instructions
+  ["price_1ShS3fB36IC5P3g5j87xQINq", 50], // €4.99
+  ["price_1ShS4hB36IC5P3g5bgciB4CB", 100], // €9.99
+  ["price_1ShS5bB36IC5P3g5lwtYmPHS", 250], // €19.99
 ]);
 
 /**
@@ -67,4 +70,3 @@ export const getPriceIdForCredits = (credits: number): string | undefined => {
 export const getCreditsForPriceId = (priceId: string): number | undefined => {
   return CREDIT_PACKS.get(priceId);
 };
-
