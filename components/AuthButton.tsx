@@ -74,10 +74,15 @@ export const AuthButton = () => {
     setOauthLoading(provider);
     setMessage(null);
 
+    // Use NEXT_PUBLIC_APP_URL if set (for production), otherwise use current origin (for local dev)
+    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+      : `${window.location.origin}/auth/callback`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
       },
     });
 

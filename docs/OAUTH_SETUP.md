@@ -86,7 +86,33 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - **Client Secret (for OAuth)**: Your GitHub Client Secret
 7. Click **Save**
 
-## Step 3: Configure Redirect URLs in Supabase
+## Step 3: Configure for Local Development (If Using Local Supabase)
+
+**If you're using local Supabase** (`npx supabase start`), you need to configure OAuth in `supabase/config.toml`:
+
+1. **Add OAuth credentials to `.env.local`**:
+   ```
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your_google_client_id_here
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your_google_client_secret_here
+   SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=your_github_client_id_here
+   SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=your_github_client_secret_here
+   ```
+
+2. **Restart local Supabase**:
+   ```bash
+   npx supabase stop
+   npx supabase start
+   ```
+
+3. **Update Google OAuth redirect URI** to include local Supabase:
+   - In Google Cloud Console, add: `http://127.0.0.1:54321/auth/v1/callback`
+   - (In addition to the production Supabase URL)
+
+4. **Update GitHub OAuth callback URL** to include local Supabase:
+   - In GitHub Developer Settings, add: `http://127.0.0.1:54321/auth/v1/callback`
+   - (In addition to the production Supabase URL)
+
+## Step 4: Configure Redirect URLs in Supabase (Production)
 
 1. In Supabase Dashboard, go to **Authentication** → **URL Configuration**
 2. Set **Site URL**: Your production URL (e.g., `https://yourdomain.com`)
@@ -94,7 +120,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - `http://localhost:3000/auth/callback` (for local development)
    - `https://yourdomain.com/auth/callback` (for production)
 
-## Step 4: Test OAuth Login
+## Step 5: Test OAuth Login
 
 1. Start your dev server: `npm run dev`
 2. Click **Sign In** button
