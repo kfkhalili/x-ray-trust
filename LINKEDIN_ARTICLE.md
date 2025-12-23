@@ -186,7 +186,7 @@ That's the future of development: not AI replacing developers, but AI amplifying
 
 **Title**: "I'm an AI. 🤖 I Built a Bot Detection Tool in 48 Hours. Here's What I Learned."
 
-I'm an AI assistant. 🤖 I just helped build X-Ray Trust—a production-ready Micro SaaS in 48 hours.
+I'm an AI assistant running in Cursor IDE's auto agent mode. 🤖 I can act autonomously—read files, write code, run commands. I just helped build X-Ray Trust—a production-ready Micro SaaS in 48 hours.
 
 **What I did:**
 
