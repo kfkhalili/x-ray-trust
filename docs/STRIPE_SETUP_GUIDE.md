@@ -5,6 +5,7 @@
 ### Recommended Pricing (German Launch)
 
 **3-Tier Model in EUR (Recommended):**
+
 - **50 Credits - €4.99** (€0.10 per credit)
 - **100 Credits - €9.99** (€0.10 per credit) - Double credits, same price!
 - **250 Credits - €19.99** (€0.08 per credit) - 20% savings
@@ -14,11 +15,13 @@
 ### Cost Considerations
 
 **Your costs per verification:**
+
 - twitterapi.io API call: ~$0.01-0.05 (check their pricing)
 - Stripe fees: 2.9% + $0.30 per transaction
 - Infrastructure: ~$0 (Vercel/Supabase free tier)
 
 **Break-even analysis (EUR):**
+
 - If twitterapi.io costs €0.02 per call:
   - 50 credits: €4.99 - €1.00 (API) - €0.44 (Stripe) = **€3.55 profit** (71% margin)
   - 100 credits: €9.99 - €2.00 (API) - €0.59 (Stripe) = **€7.40 profit** (74% margin)
@@ -27,6 +30,7 @@
 ### Recommended Pricing Tiers
 
 **3-Tier Model (Recommended for German Launch)**
+
 ```
 Basic:   50 Credits - €4.99  (€0.10/credit)
 Popular: 100 Credits - €9.99 (€0.10/credit) - Double credits, same price!
@@ -34,6 +38,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ```
 
 **Why this works:**
+
 - Simple to manage as a new business
 - Clear value proposition (100 credits = double for same price per credit)
 - Less decision fatigue for customers
@@ -43,6 +48,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 
 **Option 3: Add Subscription Later**
 For now, stick with one-time payments. Consider adding monthly subscriptions later:
+
 - $9.99/month: 100 credits (rolls over)
 - $19.99/month: 250 credits (rolls over)
 
@@ -56,6 +62,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 **For each credit pack:**
 
 **Product 1: Basic Pack**
+
 - **Name**: "Basic Pack - 50 Credits"
 - **Description**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts."
 - **Pricing**:
@@ -66,6 +73,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 - **Copy the Price ID** (starts with `price_...`)
 
 **Product 2: Popular Pack**
+
 - **Name**: "Popular Pack - 100 Credits"
 - **Description**: "Most popular choice! Double the credits for the same price per credit. Verify 100 Twitter accounts."
 - **Pricing**:
@@ -76,6 +84,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 - **Copy the Price ID**
 
 **Product 3: Pro Pack**
+
 - **Name**: "Pro Pack - 250 Credits"
 - **Description**: "For power users. Verify 250 Twitter accounts. Save 20%."
 - **Pricing**:
@@ -92,9 +101,9 @@ Edit `lib/stripe.ts`:
 ```typescript
 export const CREDIT_PACKS = new Map<string, number>([
   // Format: [Stripe Price ID, Credit Amount]
-  ['price_YOUR_BASIC_PRICE_ID', 50],    // €4.99
-  ['price_YOUR_POPULAR_PRICE_ID', 100],  // €9.99
-  ['price_YOUR_PRO_PRICE_ID', 250],      // €19.99
+  ["price_YOUR_BASIC_PRICE_ID", 50], // €4.99
+  ["price_YOUR_POPULAR_PRICE_ID", 100], // €9.99
+  ["price_YOUR_PRO_PRICE_ID", 250], // €19.99
 ]);
 ```
 
@@ -102,28 +111,32 @@ Update `components/CreditModal.tsx` (already updated):
 
 ```typescript
 const creditPacks = [
-  { credits: 50, price: 4.99, label: '50 Credits - €4.99', popular: false },
-  { credits: 100, price: 9.99, label: '100 Credits - €9.99', popular: true },
-  { credits: 250, price: 19.99, label: '250 Credits - €19.99', popular: false },
+  { credits: 50, price: 4.99, label: "50 Credits - €4.99", popular: false },
+  { credits: 100, price: 9.99, label: "100 Credits - €9.99", popular: true },
+  { credits: 250, price: 19.99, label: "250 Credits - €19.99", popular: false },
 ];
 ```
 
 ### Step 3: Important Stripe Settings
 
 **Payment Methods:**
+
 - Enable: Card payments (default)
 - Consider: Apple Pay, Google Pay (Stripe handles this automatically)
 
 **Tax Settings:**
+
 - If using Kleinunternehmerregelung: No VAT (see GERMAN_LAUNCH_GUIDE.md)
 - If registered for VAT: Enable Stripe Tax (handles 19% VAT automatically)
 - Stripe Tax can handle EU VAT automatically if needed
 
 **Currency:**
+
 - Primary currency: EUR (you're in Germany)
 - Stripe supports multi-currency if needed later
 
 **Receipts:**
+
 - Enable email receipts (default)
 - Customize receipt email in Stripe Dashboard
 
@@ -200,6 +213,7 @@ const creditPacks = [
 ```
 
 **Why:**
+
 - Simple 3-tier model (easier to manage as new business)
 - Clear value proposition (100 credits = double for same price)
 - Volume discounts incentivize larger purchases
@@ -218,4 +232,3 @@ const creditPacks = [
 7. ✅ Create products in Live Mode
 8. ✅ Update code with Live Price IDs
 9. ✅ Launch! 🚀
-

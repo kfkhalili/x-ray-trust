@@ -13,12 +13,14 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ```
 
 **Why 3 tiers:**
+
 - Easier to manage as a new business
 - Clear value proposition
 - Less decision fatigue for customers
 - You can add a starter pack later if needed
 
 **Why EUR instead of USD:**
+
 - You're in Germany, customers expect EUR
 - Stripe handles currency conversion automatically
 - Simpler for tax/accounting
@@ -29,12 +31,14 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Kleingewerbe vs Kleinunternehmen
 
 **Kleingewerbe** (Small Trade):
+
 - Revenue under €22,000/year
 - No VAT registration required (Kleinunternehmerregelung)
 - Simpler accounting
 - **Recommended for your first year**
 
 **Kleinunternehmen** (Small Enterprise):
+
 - Revenue €22,000-€500,000/year
 - Must register for VAT (Umsatzsteuer)
 - More complex accounting
@@ -43,12 +47,14 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Steps to Register
 
 1. **Gewerbeanmeldung** (Business Registration)
+
    - Go to your local **Gewerbeamt** (Trade Office)
    - Fill out "Anmeldung eines Gewerbes"
    - Cost: ~€15-30
    - Bring: ID, proof of address
 
 2. **Tax Office Registration**
+
    - Finanzamt will contact you automatically after Gewerbeanmeldung
    - You'll get a **Steuernummer** (tax number)
    - Important: Declare **Kleinunternehmerregelung** if revenue < €22,000
@@ -60,6 +66,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Kleinunternehmerregelung (Small Business Regulation)
 
 **If you opt for this (recommended for first year):**
+
 - ✅ No VAT on invoices (you don't charge 19% Mehrwertsteuer)
 - ✅ No VAT returns (no Umsatzsteuervoranmeldung)
 - ✅ Simpler accounting
@@ -67,6 +74,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 - ❌ Must show "Kleinunternehmerregelung" on invoices
 
 **When to switch to full VAT:**
+
 - Revenue exceeds €22,000/year
 - You want to claim VAT back on business expenses
 - You're selling to businesses (B2B) who need VAT invoices
@@ -84,6 +92,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Invoice Requirements (Germany)
 
 **If using Kleinunternehmerregelung, invoices must show:**
+
 ```
 "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."
 (According to § 19 UStG, no VAT is charged.)
@@ -102,6 +111,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Phase 1: Start Simple (First 3-6 Months)
 
 **Pricing:**
+
 ```
 50 Credits - €4.99
 100 Credits - €9.99
@@ -109,12 +119,14 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ```
 
 **Why:**
+
 - Simple to manage
 - Easy accounting
 - Test the market
 - See which pack sells best
 
 **Business Setup:**
+
 - Register as Kleingewerbe
 - Use Kleinunternehmerregelung (no VAT)
 - Simple bookkeeping (Einnahmen-Überschuss-Rechnung)
@@ -122,11 +134,13 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Phase 2: Optimize (After 6 Months)
 
 **Based on data:**
+
 - Add starter pack if needed (€2.99 for 25 credits)
 - Adjust pricing based on conversion rates
 - Consider subscription model if customers buy regularly
 
 **If revenue > €22,000:**
+
 - Switch to full VAT registration
 - Update Stripe to charge 19% VAT
 - Start claiming VAT back on expenses
@@ -137,6 +151,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 
 1. **Revenue** (all Stripe payments)
 2. **Expenses:**
+
    - twitterapi.io costs
    - Stripe fees
    - Domain/hosting (if paid)
@@ -148,11 +163,13 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ### Tax Obligations
 
 **Income Tax (Einkommensteuer):**
+
 - Profit is added to your personal income
 - Taxed at your personal tax rate
 - Use **Einnahmen-Überschuss-Rechnung** (EÜR) for simple accounting
 
 **VAT (Umsatzsteuer):**
+
 - None if using Kleinunternehmerregelung
 - 19% if registered for VAT
 
@@ -165,16 +182,19 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 ## Legal Considerations
 
 ### Terms of Service
+
 - ✅ Already have template (needs lawyer review)
 - ✅ German jurisdiction specified
 - ✅ Refund policy included
 
 ### Privacy Policy
+
 - ✅ GDPR compliant
 - ✅ German supervisory authority (BfDI) mentioned
 - ✅ Data retention (10 years for tax records)
 
 ### Invoices/Receipts
+
 - Stripe automatically generates receipts
 - Include required German text if using Kleinunternehmerregelung
 - Keep records for 10 years (GoBD)
@@ -184,16 +204,19 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 **For your launch:**
 
 1. **Start with 3 tiers in EUR:**
+
    - 50 Credits - €4.99
    - 100 Credits - €9.99
    - 250 Credits - €19.99
 
 2. **Register as Kleingewerbe:**
+
    - Use Kleinunternehmerregelung (no VAT)
    - Simpler accounting
    - Can switch later if needed
 
 3. **Set up Stripe in EUR:**
+
    - Primary currency: EUR
    - Enable SEPA Direct Debit
    - Configure for Kleinunternehmerregelung
@@ -205,6 +228,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
    - Add complexity later as you grow
 
 **You can always:**
+
 - Add more tiers later
 - Switch to VAT registration when revenue grows
 - Add subscriptions when you have data
@@ -218,4 +242,3 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 4. ✅ Update code with Price IDs
 5. ✅ Test in Stripe Test Mode
 6. ✅ Launch! 🚀
-
