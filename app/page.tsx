@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Search, Loader2, Shield, CreditCard } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { TrustResults } from '@/components/TrustResults';
-import { CreditModal } from '@/components/CreditModal';
-import { AuthButton } from '@/components/AuthButton';
-import { Footer } from '@/components/Footer';
-import { CookieBanner } from '@/components/CookieBanner';
-import type { TrustReport } from '@/types/trust';
-import { verifyAccount } from '@/lib/fetch-utils';
+import { useState, useEffect } from "react";
+import { Search, Loader2, Shield, CreditCard } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { TrustResults } from "@/components/TrustResults";
+import { CreditModal } from "@/components/CreditModal";
+import { AuthButton } from "@/components/AuthButton";
+import { Footer } from "@/components/Footer";
+import { CookieBanner } from "@/components/CookieBanner";
+import type { TrustReport } from "@/types/trust";
+import { verifyAccount } from "@/lib/fetch-utils";
 
 /**
  * Main landing page with search and verification.
@@ -19,14 +19,16 @@ import { verifyAccount } from '@/lib/fetch-utils';
  * provides instant restoration without API calls.
  */
 export default function Home() {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<TrustReport | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [freeLookupsRemaining, setFreeLookupsRemaining] = useState<number | null>(null);
+  const [freeLookupsRemaining, setFreeLookupsRemaining] = useState<
+    number | null
+  >(null);
 
   const supabase = createClient();
 
@@ -34,13 +36,13 @@ export default function Home() {
   useEffect(() => {
     // Restore username from URL params
     const params = new URLSearchParams(window.location.search);
-    const urlUsername = params.get('q');
+    const urlUsername = params.get("q");
     if (urlUsername) {
       setUsername(urlUsername);
     }
 
     // Restore report from sessionStorage if available
-    const storedReport = sessionStorage.getItem('lastTrustReport');
+    const storedReport = sessionStorage.getItem("lastTrustReport");
     if (storedReport) {
       // Parse and validate stored report functionally
       let parsed: unknown;
@@ -48,42 +50,44 @@ export default function Home() {
         parsed = JSON.parse(storedReport);
       } catch {
         // Invalid JSON, remove corrupted data
-        sessionStorage.removeItem('lastTrustReport');
+        sessionStorage.removeItem("lastTrustReport");
         return;
       }
 
       // Basic validation - check if it has required TrustReport fields
       // Using type guard pattern instead of type assertion
-      const isValidTrustReport = (
-        data: unknown
-      ): data is TrustReport => {
+      const isValidTrustReport = (data: unknown): data is TrustReport => {
         return (
-          typeof data === 'object' &&
+          typeof data === "object" &&
           data !== null &&
-          'userInfo' in data &&
-          'score' in data &&
-          'verdict' in data &&
-          'flags' in data &&
-          typeof (data as { score: unknown }).score === 'number' &&
-          typeof (data as { verdict: unknown }).verdict === 'string' &&
+          "userInfo" in data &&
+          "score" in data &&
+          "verdict" in data &&
+          "flags" in data &&
+          typeof (data as { score: unknown }).score === "number" &&
+          typeof (data as { verdict: unknown }).verdict === "string" &&
           Array.isArray((data as { flags: unknown }).flags)
         );
       };
 
       if (isValidTrustReport(parsed)) {
         // Only restore if it matches the current search
-        if (urlUsername && parsed.userInfo.username.toLowerCase() === urlUsername.toLowerCase().replace(/^@+/, '')) {
+        if (
+          urlUsername &&
+          parsed.userInfo.username.toLowerCase() ===
+            urlUsername.toLowerCase().replace(/^@+/, "")
+        ) {
           setReport(parsed);
         }
       } else {
         // Invalid structure, remove corrupted data
-        sessionStorage.removeItem('lastTrustReport');
+        sessionStorage.removeItem("lastTrustReport");
       }
     }
 
     // Load free lookups from localStorage (only as cache, server is source of truth)
     // Don't initialize to 3 - server tracks by IP and is the authoritative source
-    const storedFreeLookups = localStorage.getItem('freeLookupsRemaining');
+    const storedFreeLookups = localStorage.getItem("freeLookupsRemaining");
     if (storedFreeLookups !== null) {
       const parsed = parseInt(storedFreeLookups, 10);
       if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
@@ -93,41 +97,50 @@ export default function Home() {
     // If not in localStorage, leave as null - will be set from server response
 
     const loadUser = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
       if (currentUser) {
         setUser(currentUser);
 
         // Fetch credits
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('id', currentUser.id)
+          .from("profiles")
+          .select("credits")
+          .eq("id", currentUser.id)
           .single();
 
         if (profile) {
           setCredits(profile.credits);
-        } else if (profileError && profileError.code === 'PGRST116') {
+        } else if (profileError && profileError.code === "PGRST116") {
           // Profile doesn't exist (404) - trigger should have created it
           // This can happen if the trigger wasn't set up or user was created before trigger
           // Default to 0 credits and let the user know they need to contact support
           // or we could create it here, but that requires INSERT permission
           setCredits(0);
-          console.warn('Profile not found for user:', currentUser.id, '- trigger may not have run');
+          console.warn(
+            "Profile not found for user:",
+            currentUser.id,
+            "- trigger may not have run"
+          );
         }
       } else {
         // For unauthenticated users, check remaining free lookups from server
         try {
-          const response = await fetch('/api/verify', { method: 'GET' });
+          const response = await fetch("/api/verify", { method: "GET" });
           if (response.ok) {
             const data = await response.json();
-            if (typeof data.remainingFreeLookups === 'number') {
+            if (typeof data.remainingFreeLookups === "number") {
               setFreeLookupsRemaining(data.remainingFreeLookups);
-              localStorage.setItem('freeLookupsRemaining', data.remainingFreeLookups.toString());
+              localStorage.setItem(
+                "freeLookupsRemaining",
+                data.remainingFreeLookups.toString()
+              );
             }
           }
         } catch (error) {
-          console.error('Failed to check free lookups:', error);
+          console.error("Failed to check free lookups:", error);
           // Silently fail - will be updated on next verification
         }
       }
@@ -137,38 +150,38 @@ export default function Home() {
 
     // Check for successful OAuth redirect and refresh auth state
     const authParams = new URLSearchParams(window.location.search);
-    if (authParams.get('auth') === 'success') {
+    if (authParams.get("auth") === "success") {
       // Coming from successful OAuth - refresh user state
       setTimeout(loadUser, 100);
       setTimeout(loadUser, 500);
       // Clean the URL param
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, "", window.location.pathname);
     }
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          setUser(session.user);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
 
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('id', session.user.id)
-            .single();
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", session.user.id)
+          .single();
 
-          if (profile) {
-            setCredits(profile.credits);
-          } else if (profileError && profileError.code === 'PGRST116') {
-            // Profile doesn't exist - default to 0 credits
-            setCredits(0);
-          }
-        } else {
-          setUser(null);
-          setCredits(null);
+        if (profile) {
+          setCredits(profile.credits);
+        } else if (profileError && profileError.code === "PGRST116") {
+          // Profile doesn't exist - default to 0 credits
+          setCredits(0);
         }
+      } else {
+        setUser(null);
+        setCredits(null);
       }
-    );
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -178,20 +191,20 @@ export default function Home() {
   // Check for checkout success/cancel in URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const checkoutStatus = params.get('checkout');
+    const checkoutStatus = params.get("checkout");
 
-    if (checkoutStatus === 'success') {
+    if (checkoutStatus === "success") {
       // Refresh credits after successful payment
       if (user) {
         supabase
-          .from('profiles')
-          .select('credits')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("credits")
+          .eq("id", user.id)
           .single()
           .then(({ data: profile, error: profileError }) => {
             if (profile) {
               setCredits(profile.credits);
-            } else if (profileError && profileError.code === 'PGRST116') {
+            } else if (profileError && profileError.code === "PGRST116") {
               // Profile doesn't exist - default to 0 credits
               setCredits(0);
             }
@@ -199,13 +212,13 @@ export default function Home() {
       }
 
       // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, [user, supabase]);
 
   const handleVerify = async () => {
     if (!username.trim()) {
-      setError('Please enter a username');
+      setError("Please enter a username");
       return;
     }
 
@@ -214,27 +227,32 @@ export default function Home() {
     setReport(null);
 
     // Strip @ sign if present
-    const cleanUsername = username.trim().replace(/^@+/, '');
+    const cleanUsername = username.trim().replace(/^@+/, "");
 
     const result = await verifyAccount(cleanUsername);
 
     if (result.isErr()) {
       const errorMessage = result.error.message;
 
-      if (errorMessage === 'INSUFFICIENT_CREDITS') {
-        setError('Insufficient credits. Please purchase more credits to continue.');
+      if (errorMessage === "INSUFFICIENT_CREDITS") {
+        setError(
+          "Insufficient credits. Please purchase more credits to continue."
+        );
         setShowCreditModal(true);
-      } else if (errorMessage === 'ACCOUNT_NOT_FOUND') {
-        setError('Account not found. Please check the username and try again.');
-      } else if (errorMessage === 'AUTH_REQUIRED' || errorMessage === 'UNAUTHORIZED') {
-        setError('Free lookups exhausted. Please sign in to continue.');
+      } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
+        setError("Account not found. Please check the username and try again.");
+      } else if (
+        errorMessage === "AUTH_REQUIRED" ||
+        errorMessage === "UNAUTHORIZED"
+      ) {
+        setError("Free lookups exhausted. Please sign in to continue.");
         // Free lookups exhausted - update count to 0
         setFreeLookupsRemaining(0);
-        localStorage.setItem('freeLookupsRemaining', '0');
+        localStorage.setItem("freeLookupsRemaining", "0");
         // Show credit modal to prompt sign-in and payment
         setShowCreditModal(true);
       } else {
-        setError(errorMessage || 'An error occurred');
+        setError(errorMessage || "An error occurred");
       }
       setLoading(false);
       return;
@@ -243,10 +261,15 @@ export default function Home() {
     const trustReport = result.value;
 
     // Update free lookups if response includes remaining count (for unauthenticated users)
-    if ('remainingFreeLookups' in trustReport && typeof (trustReport as { remainingFreeLookups?: number }).remainingFreeLookups === 'number') {
-      const remaining = (trustReport as { remainingFreeLookups: number }).remainingFreeLookups;
+    if (
+      "remainingFreeLookups" in trustReport &&
+      typeof (trustReport as { remainingFreeLookups?: number })
+        .remainingFreeLookups === "number"
+    ) {
+      const remaining = (trustReport as { remainingFreeLookups: number })
+        .remainingFreeLookups;
       setFreeLookupsRemaining(remaining);
-      localStorage.setItem('freeLookupsRemaining', remaining.toString());
+      localStorage.setItem("freeLookupsRemaining", remaining.toString());
     }
 
     // Update UI immediately
@@ -255,28 +278,24 @@ export default function Home() {
 
     // Update URL with search query
     const url = new URL(window.location.href);
-    url.searchParams.set('q', cleanUsername);
-    window.history.pushState({}, '', url.toString());
+    url.searchParams.set("q", cleanUsername);
+    window.history.pushState({}, "", url.toString());
 
     // Store report in sessionStorage for persistence
-    sessionStorage.setItem('lastTrustReport', JSON.stringify(trustReport));
+    sessionStorage.setItem("lastTrustReport", JSON.stringify(trustReport));
 
     // Refresh credits asynchronously in the background (don't block UI)
     if (user) {
       void Promise.resolve(
-        supabase
-          .from('profiles')
-          .select('credits')
-          .eq('id', user.id)
-          .single()
+        supabase.from("profiles").select("credits").eq("id", user.id).single()
       )
-          .then(({ data: profile, error }) => {
+        .then(({ data: profile, error }) => {
           if (error) {
-            if (error.code === 'PGRST116') {
+            if (error.code === "PGRST116") {
               // Profile doesn't exist - default to 0 credits
               setCredits(0);
             } else {
-              console.error('Failed to refresh credits:', error);
+              console.error("Failed to refresh credits:", error);
             }
             return;
           }
@@ -285,13 +304,13 @@ export default function Home() {
           }
         })
         .catch((err) => {
-          console.error('Failed to refresh credits:', err);
+          console.error("Failed to refresh credits:", err);
         });
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !loading) {
+    if (e.key === "Enter" && !loading) {
       handleVerify();
     }
   };
@@ -313,7 +332,8 @@ export default function Home() {
             X Trust Radar
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Verify the trustworthiness of X (Twitter) accounts using advanced metadata analysis
+            Verify the trustworthiness of X (Twitter) accounts using advanced
+            metadata analysis
           </p>
         </div>
 
@@ -323,13 +343,15 @@ export default function Home() {
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-emerald-400" />
               <span className="text-gray-300 text-sm">
-                <span className="font-semibold text-emerald-400">{credits}</span> credits
+                <span className="font-semibold text-emerald-400">
+                  {credits}
+                </span>{" "}
+                credits
               </span>
             </div>
             <button
               onClick={() => setShowCreditModal(true)}
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               Buy Credits
             </button>
           </div>
@@ -338,14 +360,17 @@ export default function Home() {
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-400" />
               <span className="text-gray-300 text-sm">
-                <span className="font-semibold text-blue-400">{freeLookupsRemaining}</span> free {freeLookupsRemaining === 1 ? 'lookup' : 'lookups'} remaining
+                <span className="font-semibold text-blue-400">
+                  {freeLookupsRemaining}
+                </span>{" "}
+                free {freeLookupsRemaining === 1 ? "lookup" : "lookups"}{" "}
+                remaining
               </span>
             </div>
             {freeLookupsRemaining === 0 && (
               <button
                 onClick={() => setShowCreditModal(true)}
-                className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 Sign In to Continue
               </button>
             )}
@@ -372,8 +397,7 @@ export default function Home() {
             <button
               onClick={handleVerify}
               disabled={loading || !username.trim()}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
-            >
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2">
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -416,4 +440,3 @@ export default function Home() {
     </div>
   );
 }
-
