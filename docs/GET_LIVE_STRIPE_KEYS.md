@@ -1,16 +1,16 @@
 # How to Get Live Stripe Keys
 
-> ⚠️ **Security Note**: This documentation contains example key formats (like `sk_live_PLACEHOLDER for illustration purposes only. These are NOT real keys and are safe to commit to git. Always use your actual keys from Stripe Dashboard in environment variables only.
+> ⚠️ **Security Note**: This documentation describes how to get your Stripe keys. Never commit actual keys to git - always use environment variables only.
 
 ## Step 1: Get STRIPE_SECRET_KEY (Live Mode)
 
 1. **Go to Stripe Dashboard**: https://dashboard.stripe.com
 2. **Make sure you're in Live Mode** (toggle in top right - should say "Live mode" not "Test mode")
 3. **Navigate to**: Developers → API keys
-4. **Find "Secret key"** (starts with `sk_live_PLACEHOLDER
+4. **Find "Secret key"** (will start with "sk_live" prefix)
 5. **Click "Reveal test key" or "Reveal live key"** to show the full key
-6. **Copy the entire key** (it will look like: `sk_live_PLACEHOLDER
-   - ⚠️ **Note**: The example above is NOT a real key - it's just showing the format
+6. **Copy the entire key** (it will be a long string starting with "sk_live")
+   - ⚠️ **Note**: Your actual key will be unique and much longer
 
 ⚠️ **Important**:
 
@@ -41,10 +41,10 @@
 ### Then, Get the Signing Secret
 
 1. **After creating the endpoint**, click on it in the webhooks list
-2. **Find "Signing secret"** (starts with `whsec_PLACEHOLDER
+2. **Find "Signing secret"** (will start with "whsec" prefix)
 3. **Click "Reveal"** to show the full secret
-4. **Copy the entire secret** (it will look like: `whsec_PLACEHOLDER
-   - ⚠️ **Note**: The example above is NOT a real secret - it's just showing the format
+4. **Copy the entire secret** (it will be a string starting with "whsec")
+   - ⚠️ **Note**: Your actual secret will be unique
 
 ⚠️ **Important**:
 
@@ -62,11 +62,11 @@
 3. Add these two variables:
 
 ```
-STRIPE_SECRET_KEY=sk_live_PLACEHOLDER
-STRIPE_WEBHOOK_SECRET=whsec_PLACEHOLDER
+STRIPE_SECRET_KEY=your_live_secret_key_from_stripe_dashboard
+STRIPE_WEBHOOK_SECRET=your_webhook_secret_from_stripe_dashboard
 ```
 
-⚠️ **Important**: Replace `YOUR_ACTUAL_KEY_HERE` and `YOUR_ACTUAL_SECRET_HERE` with your real keys from Stripe Dashboard. The examples above are placeholders only.
+⚠️ **Important**: Replace the placeholder text with your actual keys from Stripe Dashboard.
 
 4. **Make sure to select "Production"** environment (and optionally "Preview" if you want)
 5. Click "Save"
@@ -79,11 +79,11 @@ If you want to test with live keys locally (not recommended, but possible):
 1. Add to your `.env.local` file:
 
 ```
-STRIPE_SECRET_KEY=sk_live_PLACEHOLDER
-STRIPE_WEBHOOK_SECRET=whsec_PLACEHOLDER
+STRIPE_SECRET_KEY=your_live_secret_key_from_stripe_dashboard
+STRIPE_WEBHOOK_SECRET=your_webhook_secret_from_stripe_dashboard
 ```
 
-⚠️ **Important**: Replace the placeholders with your actual keys. These are examples only.
+⚠️ **Important**: Replace the placeholder text with your actual keys from Stripe Dashboard.
 
 ⚠️ **Warning**: Testing with live keys locally means you'll be processing real payments! Use test mode for local development instead.
 
@@ -98,8 +98,8 @@ STRIPE_WEBHOOK_SECRET=whsec_PLACEHOLDER
 
 ### Test vs Live Keys
 
-- **Test keys** start with `sk_test_...` and `whsec_PLACEHOLDER
-- **Live keys** start with `sk_live_PLACEHOLDER and `whsec_PLACEHOLDER (no "test" in the name)
+- **Test keys** start with "sk_test" and "whsec_PLACEHOLDER prefixes
+- **Live keys** start with "sk_live" and "whsec" prefixes (no "test" in the name)
 - **Never mix them**: Use test keys in test mode, live keys in live mode
 
 ### Security Best Practices
