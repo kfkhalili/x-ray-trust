@@ -1,12 +1,13 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'X Trust Radar - Verify Twitter Account Trustworthiness',
-  description: 'Verify the trustworthiness of X (Twitter) accounts using advanced metadata analysis',
+  title: "X Trust Radar - Verify Twitter Account Trustworthiness",
+  description:
+    "Verify the trustworthiness of X (Twitter) accounts using advanced metadata analysis",
 };
 
 export default function RootLayout({
@@ -20,4 +21,3 @@ export default function RootLayout({
     </html>
   );
 }
-
