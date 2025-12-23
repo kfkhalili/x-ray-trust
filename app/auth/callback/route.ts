@@ -16,13 +16,17 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
+    if (!error && data.session) {
       // Successful authentication, redirect to home (or next URL)
       // Add a query param to signal successful auth so the client can refresh
       const redirectUrl = next.includes('?') ? `${next}&auth=success` : `${next}?auth=success`;
       redirect(redirectUrl);
+    } else {
+      // Log error for debugging
+      console.error('OAuth callback error:', error);
+      redirect(`/?error=auth_failed&details=${encodeURIComponent(error?.message || 'unknown')}`);
     }
   }
 

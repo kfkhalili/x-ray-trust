@@ -25,8 +25,27 @@ export const AuthButton = () => {
   useEffect(() => {
     // Check current session on mount and after redirects
     const checkUser = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
+      // Check both getUser and getSession to ensure we catch the session
+      const [userResult, sessionResult] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ]);
+      
+      console.log('Checking user:', {
+        user: userResult.data.user?.email || 'no user',
+        session: sessionResult.data.session ? 'has session' : 'no session',
+        error: userResult.error?.message || sessionResult.error?.message || 'none',
+      });
+      
+      const currentUser = userResult.data.user || sessionResult.data.session?.user || null;
+      
+      if (currentUser) {
+        console.log('Setting user:', currentUser.email);
+        setUser(currentUser);
+      } else {
+        console.log('No user found');
+        setUser(null);
+      }
     };
 
     checkUser();
@@ -34,13 +53,16 @@ export const AuthButton = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email || 'no user');
         setUser(session?.user ?? null);
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setShowSignIn(false);
           setMessage(null);
           // Force a refresh of user data after sign in
           const { data: { user: updatedUser } } = await supabase.auth.getUser();
-          setUser(updatedUser);
+          if (updatedUser) {
+            setUser(updatedUser);
+          }
         }
       }
     );
