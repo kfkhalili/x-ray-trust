@@ -89,6 +89,28 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
    - Germany: 19% VAT (if not using Kleinunternehmerregelung)
    - EU countries: Varies (Stripe Tax handles this)
 
+### Statement Descriptor (Required)
+
+**What it is:** The text that appears on your customer's credit card statement.
+
+**Requirements:**
+- **5-22 characters** (Stripe requirement)
+- **Only letters, numbers, and spaces** (no special characters)
+- **Should be recognizable** - customers should know what the charge is for
+
+**For Kleingewerbe/Kleinunternehmerregelung:**
+- ✅ **No VAT info needed** - the descriptor is just for identification on card statements
+- ✅ Keep it simple and match your business name
+- ✅ VAT exemption text goes on invoices/receipts, NOT in the statement descriptor
+
+**Recommended:**
+- `XRAYTRUST` (9 characters - simple and clear)
+- `XRAY TRUST` (10 characters - more readable)
+
+**How to set:**
+1. Add `STRIPE_STATEMENT_DESCRIPTOR=XRAYTRUST` to your `.env.local`
+2. Or set default in Stripe Dashboard → Settings → Business details → Statement descriptor
+
 ### Invoice Requirements (Germany)
 
 **If using Kleinunternehmerregelung, invoices must show:**
@@ -98,7 +120,7 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 (According to § 19 UStG, no VAT is charged.)
 ```
 
-**Stripe automatically includes this** if you configure it correctly.
+**Stripe automatically includes this** if you configure it correctly in Stripe Dashboard → Settings → Business details → Tax settings.
 
 ### Payment Methods
 

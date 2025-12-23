@@ -34,6 +34,11 @@ const createCheckoutSession = async (
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   try {
+    // Statement descriptor appears on customer's credit card statement
+    // Requirements: 5-22 characters, letters/numbers/spaces only
+    // For Kleingewerbe: No VAT info needed, just business name
+    const statementDescriptor = process.env.STRIPE_STATEMENT_DESCRIPTOR || 'XRAYTRUST';
+
     const session = await stripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -46,6 +51,9 @@ const createCheckoutSession = async (
       success_url: `${baseUrl}?checkout=success`,
       cancel_url: `${baseUrl}?checkout=canceled`,
       customer_email: userEmail || undefined,
+      payment_intent_data: {
+        statement_descriptor: statementDescriptor,
+      },
       metadata: {
         userId,
         credits: credits.toString(),
