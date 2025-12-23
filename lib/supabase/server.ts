@@ -30,7 +30,18 @@ export const createClient = async () => {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            // Ensure cookies are set with proper options for browser client to read them
+            cookieStore.set(name, value, {
+              ...options,
+              // Ensure SameSite is set for cross-site requests (OAuth)
+              sameSite: options?.sameSite || 'lax',
+              // Ensure Secure is set for HTTPS (production)
+              secure: options?.secure ?? process.env.NODE_ENV === 'production',
+              // Ensure httpOnly is false so browser client can read it
+              httpOnly: options?.httpOnly ?? false,
+              // Set path to root so it's accessible everywhere
+              path: options?.path || '/',
+            });
           });
         },
       },

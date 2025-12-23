@@ -37,7 +37,38 @@ export const AuthButton = () => {
         error: userResult.error?.message || sessionResult.error?.message || 'none',
       });
 
-      const currentUser = userResult.data.user || sessionResult.data.session?.user || null;
+      let currentUser = userResult.data.user || sessionResult.data.session?.user || null;
+
+      // If browser client can't find session, try server-side check as fallback
+      // This helps when cookies aren't immediately readable by browser client
+      // The server can read cookies from request headers even if browser client can't
+      if (!currentUser) {
+        try {
+          const serverResponse = await fetch('/api/auth/session', {
+            credentials: 'include', // Ensure cookies are sent with request
+          });
+          if (serverResponse.ok) {
+            const serverData = await serverResponse.json();
+            if (serverData.user && serverData.session) {
+              console.log('Found user via server-side check:', serverData.user.email);
+              // Server has session but browser client can't read cookies
+              // Trigger a refresh by calling getUser again after a short delay
+              // This gives cookies time to be properly set/read
+              setTimeout(async () => {
+                const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                if (refreshedUser) {
+                  console.log('Browser client found user after delay:', refreshedUser.email);
+                  setUser(refreshedUser);
+                }
+              }, 100);
+              // Don't set currentUser here - let the retry handle it or onAuthStateChange will fire
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Server-side session check failed:', error);
+        }
+      }
 
       if (currentUser) {
         console.log('Setting user:', currentUser.email);
