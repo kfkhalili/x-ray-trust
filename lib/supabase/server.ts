@@ -15,7 +15,11 @@ export const createClient = async () => {
   // Defensive check: Return error if env vars missing
   // Prevents build-time errors when env vars aren't available
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set. ' +
+      'You can use either the legacy anon key (JWT format) or a publishable key (sb_publishable_...). ' +
+      'Get your keys from: https://app.supabase.com/project/_/settings/api'
+    );
   }
 
   const cookieStore = await cookies();
@@ -30,18 +34,7 @@ export const createClient = async () => {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            // Ensure cookies are set with proper options for browser client to read them
-            cookieStore.set(name, value, {
-              ...options,
-              // Ensure SameSite is set for cross-site requests (OAuth)
-              sameSite: options?.sameSite || 'lax',
-              // Ensure Secure is set for HTTPS (production)
-              secure: options?.secure ?? process.env.NODE_ENV === 'production',
-              // Ensure httpOnly is false so browser client can read it
-              httpOnly: options?.httpOnly ?? false,
-              // Set path to root so it's accessible everywhere
-              path: options?.path || '/',
-            });
+            cookieStore.set(name, value, options);
           });
         },
       },

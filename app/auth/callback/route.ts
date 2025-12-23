@@ -37,16 +37,18 @@ export async function GET(request: NextRequest) {
       );
 
       // Log success and cookie info for debugging
-      const cookieStore = await import('next/headers').then(m => m.cookies());
+      const cookieStore = await import("next/headers").then((m) => m.cookies());
       const allCookies = await cookieStore.getAll();
-      const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'));
-      
+      const supabaseCookies = allCookies.filter((c) =>
+        c.name.startsWith("sb-")
+      );
+
       console.log("OAuth callback success:", {
         userId: data.session.user.id,
         email: data.session.user.email,
         hasSession: !!data.session,
         cookiesSet: supabaseCookies.length,
-        cookieNames: supabaseCookies.map(c => c.name),
+        cookieNames: supabaseCookies.map((c) => c.name),
       });
 
       return response;
