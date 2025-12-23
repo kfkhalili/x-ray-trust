@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { X, CreditCard } from 'lucide-react';
+import { createCheckoutSession } from '@/lib/fetch-utils';
+import { AuthButton } from './AuthButton';
 
 interface CreditModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCredits: number;
+  user?: any; // User object from Supabase, undefined if not signed in
 }
 
 /**
@@ -15,8 +18,10 @@ interface CreditModalProps {
  * Why redirect to Stripe? We don't handle payment forms—Stripe does.
  * Redirecting to Stripe Checkout keeps PCI compliance on Stripe's side,
  * not ours. After payment, webhook grants credits automatically.
+ *
+ * If user is not signed in, shows sign-in prompt instead of credit packs.
  */
-export const CreditModal = ({ isOpen, onClose, currentCredits }: CreditModalProps) => {
+export const CreditModal = ({ isOpen, onClose, currentCredits, user }: CreditModalProps) => {
   const [loading, setLoading] = useState(false);
   const [selectedCredits, setSelectedCredits] = useState<number | null>(null);
 
@@ -28,39 +33,59 @@ export const CreditModal = ({ isOpen, onClose, currentCredits }: CreditModalProp
   ];
 
   const handleCheckout = async () => {
-    if (!selectedCredits) {
+    if (!selectedCredits || !user) {
       return;
     }
 
     setLoading(true);
 
-    try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ credits: selectedCredits }),
-      });
+    const result = await createCheckoutSession(selectedCredits);
 
-      if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Failed to create checkout session');
-        return;
-      }
-
-      const { url } = await response.json() as { url: string };
-      window.location.href = url;
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('An error occurred. Please try again.');
-    } finally {
+    if (result.isErr()) {
+      console.error('Checkout error:', result.error);
+      alert(result.error.message || 'Failed to create checkout session');
       setLoading(false);
+      return;
     }
+
+    window.location.href = result.value.url;
+    // Note: setLoading(false) not needed - page will redirect
   };
 
   if (!isOpen) {
     return null;
+  }
+
+  // Show sign-in prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-md w-full p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-100">Sign In Required</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Message */}
+          <div className="bg-gray-800/50 rounded-lg p-4">
+            <p className="text-gray-300 text-sm">
+              You've used all 3 free lookups. Sign in to purchase credits and continue verifying accounts.
+            </p>
+          </div>
+
+          {/* Sign In Button */}
+          <div className="flex justify-center">
+            <AuthButton />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

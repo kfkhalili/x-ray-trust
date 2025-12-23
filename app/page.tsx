@@ -7,6 +7,7 @@ import { TrustResults } from '@/components/TrustResults';
 import { CreditModal } from '@/components/CreditModal';
 import { AuthButton } from '@/components/AuthButton';
 import type { TrustReport } from '@/types/trust';
+import { verifyAccount } from '@/lib/fetch-utils';
 
 /**
  * Main landing page with search and verification.
@@ -23,10 +24,11 @@ export default function Home() {
   const [credits, setCredits] = useState<number | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [freeLookupsRemaining, setFreeLookupsRemaining] = useState<number | null>(null);
 
   const supabase = createClient();
 
-  // Load user session, credits, and restore search state on mount
+  // Load user session, credits, free lookups, and restore search state on mount
   useEffect(() => {
     // Restore username from URL params
     const params = new URLSearchParams(window.location.search);
@@ -38,17 +40,55 @@ export default function Home() {
     // Restore report from sessionStorage if available
     const storedReport = sessionStorage.getItem('lastTrustReport');
     if (storedReport) {
+      // Parse and validate stored report functionally
+      let parsed: unknown;
       try {
-        const parsedReport = JSON.parse(storedReport) as TrustReport;
+        parsed = JSON.parse(storedReport);
+      } catch {
+        // Invalid JSON, remove corrupted data
+        sessionStorage.removeItem('lastTrustReport');
+        return;
+      }
+
+      // Basic validation - check if it has required TrustReport fields
+      // Using type guard pattern instead of type assertion
+      const isValidTrustReport = (
+        data: unknown
+      ): data is TrustReport => {
+        return (
+          typeof data === 'object' &&
+          data !== null &&
+          'userInfo' in data &&
+          'score' in data &&
+          'verdict' in data &&
+          'flags' in data &&
+          typeof (data as { score: unknown }).score === 'number' &&
+          typeof (data as { verdict: unknown }).verdict === 'string' &&
+          Array.isArray((data as { flags: unknown }).flags)
+        );
+      };
+
+      if (isValidTrustReport(parsed)) {
         // Only restore if it matches the current search
-        if (urlUsername && parsedReport.userInfo.username.toLowerCase() === urlUsername.toLowerCase().replace(/^@+/, '')) {
-          setReport(parsedReport);
+        if (urlUsername && parsed.userInfo.username.toLowerCase() === urlUsername.toLowerCase().replace(/^@+/, '')) {
+          setReport(parsed);
         }
-      } catch (e) {
-        // Invalid stored data, ignore
+      } else {
+        // Invalid structure, remove corrupted data
         sessionStorage.removeItem('lastTrustReport');
       }
     }
+
+    // Load free lookups from localStorage (only as cache, server is source of truth)
+    // Don't initialize to 3 - server tracks by IP and is the authoritative source
+    const storedFreeLookups = localStorage.getItem('freeLookupsRemaining');
+    if (storedFreeLookups !== null) {
+      const parsed = parseInt(storedFreeLookups, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+        setFreeLookupsRemaining(parsed);
+      }
+    }
+    // If not in localStorage, leave as null - will be set from server response
 
     const loadUser = async () => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -65,6 +105,21 @@ export default function Home() {
 
         if (profile) {
           setCredits(profile.credits);
+        }
+      } else {
+        // For unauthenticated users, check remaining free lookups from server
+        try {
+          const response = await fetch('/api/verify', { method: 'GET' });
+          if (response.ok) {
+            const data = await response.json();
+            if (typeof data.remainingFreeLookups === 'number') {
+              setFreeLookupsRemaining(data.remainingFreeLookups);
+              localStorage.setItem('freeLookupsRemaining', data.remainingFreeLookups.toString());
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check free lookups:', error);
+          // Silently fail - will be updated on next verification
         }
       }
     };
@@ -129,11 +184,6 @@ export default function Home() {
       return;
     }
 
-    if (!user) {
-      setError('Please sign in to verify accounts');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setReport(null);
@@ -141,67 +191,72 @@ export default function Home() {
     // Strip @ sign if present
     const cleanUsername = username.trim().replace(/^@+/, '');
 
-    try {
-      const response = await fetch('/api/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username: cleanUsername }),
-      });
+    const result = await verifyAccount(cleanUsername);
 
-      if (!response.ok) {
-        const errorData = await response.json() as { error: string; code: string };
+    if (result.isErr()) {
+      const errorMessage = result.error.message;
 
-        if (errorData.code === 'INSUFFICIENT_CREDITS') {
-          setError('Insufficient credits. Please purchase more credits to continue.');
-          setShowCreditModal(true);
-        } else if (errorData.code === 'ACCOUNT_NOT_FOUND') {
-          setError('Account not found. Please check the username and try again.');
-        } else if (errorData.code === 'UNAUTHORIZED') {
-          setError('Please sign in to verify accounts');
-        } else {
-          setError(errorData.error || 'An error occurred');
-        }
-        setLoading(false);
-        return;
+      if (errorMessage === 'INSUFFICIENT_CREDITS') {
+        setError('Insufficient credits. Please purchase more credits to continue.');
+        setShowCreditModal(true);
+      } else if (errorMessage === 'ACCOUNT_NOT_FOUND') {
+        setError('Account not found. Please check the username and try again.');
+      } else if (errorMessage === 'AUTH_REQUIRED' || errorMessage === 'UNAUTHORIZED') {
+        setError('Free lookups exhausted. Please sign in to continue.');
+        // Free lookups exhausted - update count to 0
+        setFreeLookupsRemaining(0);
+        localStorage.setItem('freeLookupsRemaining', '0');
+        // Show credit modal to prompt sign-in and payment
+        setShowCreditModal(true);
+      } else {
+        setError(errorMessage || 'An error occurred');
       }
-
-      const trustReport = await response.json() as TrustReport;
-
-      // Update UI immediately
-      setReport(trustReport);
       setLoading(false);
+      return;
+    }
 
-      // Update URL with search query
-      const url = new URL(window.location.href);
-      url.searchParams.set('q', cleanUsername);
-      window.history.pushState({}, '', url.toString());
+    const trustReport = result.value;
 
-      // Store report in sessionStorage for persistence
-      sessionStorage.setItem('lastTrustReport', JSON.stringify(trustReport));
+    // Update free lookups if response includes remaining count (for unauthenticated users)
+    if ('remainingFreeLookups' in trustReport && typeof (trustReport as { remainingFreeLookups?: number }).remainingFreeLookups === 'number') {
+      const remaining = (trustReport as { remainingFreeLookups: number }).remainingFreeLookups;
+      setFreeLookupsRemaining(remaining);
+      localStorage.setItem('freeLookupsRemaining', remaining.toString());
+    }
 
-      // Refresh credits asynchronously in the background (don't block UI)
-      if (user) {
+    // Update UI immediately
+    setReport(trustReport);
+    setLoading(false);
+
+    // Update URL with search query
+    const url = new URL(window.location.href);
+    url.searchParams.set('q', cleanUsername);
+    window.history.pushState({}, '', url.toString());
+
+    // Store report in sessionStorage for persistence
+    sessionStorage.setItem('lastTrustReport', JSON.stringify(trustReport));
+
+    // Refresh credits asynchronously in the background (don't block UI)
+    if (user) {
+      void Promise.resolve(
         supabase
           .from('profiles')
           .select('credits')
           .eq('id', user.id)
           .single()
-          .then(({ data: profile, error }) => {
-            if (error) {
-              console.error('Failed to refresh credits:', error);
-              return;
-            }
-            if (profile) {
-              setCredits(profile.credits);
-            }
-          });
-      }
-    } catch (err) {
-      console.error('Verification error:', err);
-      setError('An unexpected error occurred. Please try again.');
-      setLoading(false);
+      )
+        .then(({ data: profile, error }) => {
+          if (error) {
+            console.error('Failed to refresh credits:', error);
+            return;
+          }
+          if (profile) {
+            setCredits(profile.credits);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to refresh credits:', err);
+        });
     }
   };
 
@@ -232,8 +287,8 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Credits Display */}
-        {user && credits !== null && (
+        {/* Credits/Free Lookups Display */}
+        {user && credits !== null ? (
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-emerald-400" />
@@ -248,7 +303,24 @@ export default function Home() {
               Buy Credits
             </button>
           </div>
-        )}
+        ) : freeLookupsRemaining !== null ? (
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-300 text-sm">
+                <span className="font-semibold text-blue-400">{freeLookupsRemaining}</span> free {freeLookupsRemaining === 1 ? 'lookup' : 'lookups'} remaining
+              </span>
+            </div>
+            {freeLookupsRemaining === 0 && (
+              <button
+                onClick={() => setShowCreditModal(true)}
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Sign In to Continue
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {/* Search Bar */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm mb-8">
@@ -298,13 +370,12 @@ export default function Home() {
         {report && <TrustResults report={report} />}
 
         {/* Credit Modal */}
-        {user && (
-          <CreditModal
-            isOpen={showCreditModal}
-            onClose={() => setShowCreditModal(false)}
-            currentCredits={credits ?? 0}
-          />
-        )}
+        <CreditModal
+          isOpen={showCreditModal}
+          onClose={() => setShowCreditModal(false)}
+          currentCredits={credits ?? 0}
+          user={user}
+        />
       </div>
     </div>
   );
