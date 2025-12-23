@@ -371,32 +371,25 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   const isAuthenticated = !authError && user !== null;
 
+  // Get client IP once (used throughout this function)
+  const clientIp = getClientIp(request);
+
   // Determine if this is a free lookup or requires credits
+  // Both authenticated and unauthenticated users get free lookups (tracked by IP)
   let isFreeLookup = false;
   let requiresAuth = false;
 
-  if (!isAuthenticated) {
-    // Check free lookups for unauthenticated users
-    const clientIp = getClientIp(request);
-    const remainingFree = getRemainingFreeLookups(clientIp);
+  // Check free lookups for all users (tracked by IP address)
+  const remainingFree = getRemainingFreeLookups(clientIp);
 
-    if (remainingFree > 0) {
-      isFreeLookup = true;
-    } else {
-      // Free lookups exhausted, require authentication
-      requiresAuth = true;
-    }
-  }
-
-  if (requiresAuth) {
-    return NextResponse.json<ErrorResponse>(
-      { error: 'Free lookups exhausted. Please sign in to continue.', code: 'AUTH_REQUIRED' },
-      { status: 401 }
-    );
-  }
-
-  // For authenticated users, check credits
-  if (isAuthenticated) {
+  if (remainingFree > 0) {
+    // User has free lookups available - use those first (for both authenticated and unauthenticated)
+    isFreeLookup = true;
+  } else if (!isAuthenticated) {
+    // Unauthenticated user with no free lookups - require authentication
+    requiresAuth = true;
+  } else {
+    // Authenticated user with no free lookups - check credits
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('credits')
@@ -411,11 +404,30 @@ export async function POST(request: NextRequest) {
     }
 
     if (profile.credits <= 0) {
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Insufficient credits', code: 'INSUFFICIENT_CREDITS' },
+      // No free lookups and no credits - return error with reset time for countdown
+      const nextResetTime = getTimeUntilNextReset(clientIp);
+      return NextResponse.json<ErrorResponse & { nextResetTime?: number | null }>(
+        { 
+          error: 'Insufficient credits and free lookups exhausted', 
+          code: 'INSUFFICIENT_CREDITS',
+          nextResetTime: nextResetTime,
+        },
         { status: 402 }
       );
     }
+    // User has credits - will use credits (not free lookup)
+  }
+
+  if (requiresAuth) {
+    const nextResetTime = getTimeUntilNextReset(clientIp);
+    return NextResponse.json<ErrorResponse & { nextResetTime?: number | null }>(
+      { 
+        error: 'Free lookups exhausted. Please sign in to continue.', 
+        code: 'AUTH_REQUIRED',
+        nextResetTime: nextResetTime,
+      },
+      { status: 401 }
+    );
   }
 
   // Fetch account data from twitterapi.io - using Result type
@@ -447,7 +459,6 @@ export async function POST(request: NextRequest) {
 
   // Deduct credit or record free lookup (only after successful verification)
   if (isFreeLookup) {
-    const clientIp = getClientIp(request);
     const allowed = recordFreeLookup(clientIp);
     if (!allowed) {
       // This shouldn't happen due to earlier check, but handle race conditions
@@ -470,16 +481,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Include remaining free lookups and reset time in response for unauthenticated users
-  const responseData: TrustReport & {
+  // Include remaining free lookups and reset time in response for all users
+  // Both authenticated and unauthenticated users get free lookups (tracked by IP)
+  const responseData: TrustReport & { 
     remainingFreeLookups?: number;
     nextResetTime?: number | null;
   } = trustReport;
-  if (!isAuthenticated) {
-    const clientIp = getClientIp(request);
-    responseData.remainingFreeLookups = getRemainingFreeLookups(clientIp);
-    responseData.nextResetTime = getTimeUntilNextReset(clientIp);
-  }
+  responseData.remainingFreeLookups = getRemainingFreeLookups(clientIp);
+  responseData.nextResetTime = getTimeUntilNextReset(clientIp);
 
   return NextResponse.json(responseData);
 }
@@ -492,25 +501,15 @@ export async function POST(request: NextRequest) {
  * on page load.
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  // Return free lookup count and reset time for all users (tracked by IP)
+  // Both authenticated and unauthenticated users get free lookups
+  const clientIp = getClientIp(request);
+  const remaining = getRemainingFreeLookups(clientIp);
+  const nextResetTime = getTimeUntilNextReset(clientIp);
 
-  // Try to authenticate user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  const isAuthenticated = !authError && user !== null;
-
-  // Only return free lookup count and reset time for unauthenticated users
-  if (!isAuthenticated) {
-    const clientIp = getClientIp(request);
-    const remaining = getRemainingFreeLookups(clientIp);
-    const nextResetTime = getTimeUntilNextReset(clientIp);
-
-    return NextResponse.json({
-      remainingFreeLookups: remaining,
-      nextResetTime: nextResetTime,
-    });
-  }
-
-  // Authenticated users don't use free lookups
-  return NextResponse.json({ remainingFreeLookups: null, nextResetTime: null });
+  return NextResponse.json({ 
+    remainingFreeLookups: remaining,
+    nextResetTime: nextResetTime,
+  });
 }
 

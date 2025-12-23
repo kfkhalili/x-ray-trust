@@ -207,9 +207,22 @@ export default function Home() {
 
       if (currentUser) {
         setUser(currentUser);
-        // Clear free lookups when user is authenticated (they use credits now)
-        setFreeLookupsRemaining(null);
-        localStorage.removeItem("freeLookupsRemaining");
+        // Authenticated users also get free lookups (tracked by IP)
+        // Fetch free lookups from server
+        try {
+          const response = await fetch("/api/verify", { method: "GET" });
+          if (response.ok) {
+            const data = await response.json();
+            if (typeof data.remainingFreeLookups === "number") {
+              setFreeLookupsRemaining(data.remainingFreeLookups);
+            }
+            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+              setNextResetTime(data.nextResetTime);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check free lookups:", error);
+        }
 
         // Fetch credits using centralized function
         await fetchCredits(currentUser.id);
@@ -266,9 +279,22 @@ export default function Home() {
       if (session?.user) {
         const wasUnauthenticated = !user; // Track if user just signed in
         setUser(session.user);
-        // Clear free lookups when user authenticates (they use credits now)
-        setFreeLookupsRemaining(null);
-        localStorage.removeItem("freeLookupsRemaining");
+        // Authenticated users also get free lookups (tracked by IP)
+        // Fetch free lookups from server
+        try {
+          const response = await fetch("/api/verify", { method: "GET" });
+          if (response.ok) {
+            const data = await response.json();
+            if (typeof data.remainingFreeLookups === "number") {
+              setFreeLookupsRemaining(data.remainingFreeLookups);
+            }
+            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+              setNextResetTime(data.nextResetTime);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check free lookups:", error);
+        }
 
         // Fetch credits using centralized function
         await fetchCredits(session.user.id);
@@ -373,11 +399,16 @@ export default function Home() {
       // Clear last searched username on error so user can retry
       setLastSearchedUsername(null);
 
-      if (errorMessage === "INSUFFICIENT_CREDITS") {
-        setError(
-          "Insufficient credits. Please purchase more credits to continue."
-        );
-        setShowCreditModal(true);
+        if (errorMessage === "INSUFFICIENT_CREDITS") {
+          // Check if error includes nextResetTime for countdown
+          const errorWithResetTime = result.error as Error & { nextResetTime?: number | null };
+          if (errorWithResetTime.nextResetTime !== undefined) {
+            setNextResetTime(errorWithResetTime.nextResetTime);
+          }
+          setError(
+            "Insufficient credits and free lookups exhausted. Please purchase more credits or wait for free lookups to reset."
+          );
+          setShowCreditModal(true);
       } else if (errorMessage === "RATE_LIMIT_EXCEEDED") {
         setError("Rate limit exceeded. Please wait a moment and try again.");
       } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
@@ -485,18 +516,58 @@ export default function Home() {
 
         {/* Credits/Free Lookups Display */}
         {user ? (
-          // Authenticated users: always show credits (even if 0 or null)
+          // Authenticated users: show credits and free lookups
           credits !== null ? (
-            <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
+              {/* Credits Display */}
               <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-emerald-400" />
-                <span className="text-gray-300 text-sm">
-                  <span className="font-semibold text-emerald-400">
-                    {credits}
-                  </span>{" "}
-                  credits
-                </span>
+                {credits > 0 ? (
+                  <span className="text-gray-300 text-sm">
+                    <span className="font-semibold text-emerald-400">
+                      {credits}
+                    </span>{" "}
+                    credits
+                  </span>
+                ) : (
+                  <span className="text-gray-300 text-sm">
+                    <span className="font-semibold text-emerald-400">0</span> credits
+                  </span>
+                )}
               </div>
+              
+              {/* Free Lookups Display (authenticated users also get free lookups) */}
+              {freeLookupsRemaining !== null && (
+                <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-blue-400" />
+                  {freeLookupsRemaining > 0 ? (
+                    <span className="text-gray-300 text-sm">
+                      <span className="font-semibold text-blue-400">
+                        {freeLookupsRemaining}
+                      </span>{" "}
+                      free {freeLookupsRemaining === 1 ? "lookup" : "lookups"}
+                    </span>
+                  ) : (
+                    <FreeLookupCountdown 
+                      nextResetTime={nextResetTime}
+                      onReset={() => {
+                        // Refresh free lookups when countdown reaches zero
+                        fetch("/api/verify", { method: "GET" })
+                          .then((res) => res.json())
+                          .then((data) => {
+                            if (typeof data.remainingFreeLookups === "number") {
+                              setFreeLookupsRemaining(data.remainingFreeLookups);
+                              setNextResetTime(data.nextResetTime);
+                            }
+                          })
+                          .catch(console.error);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+              
+              {/* Buy Credits Button */}
               <button
                 onClick={() => setShowCreditModal(true)}
                 className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">

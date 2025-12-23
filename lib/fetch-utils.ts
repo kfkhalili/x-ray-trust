@@ -99,8 +99,13 @@ export const verifyAccount = async (username: string): Promise<Result<TrustRepor
       const errorData = errorResult.value;
 
       // Map error codes to user-friendly messages
+      // Also preserve nextResetTime if present (for countdown display)
       if (errorData.code === 'INSUFFICIENT_CREDITS') {
-        return err(new Error('INSUFFICIENT_CREDITS'));
+        const error = new Error('INSUFFICIENT_CREDITS') as Error & { nextResetTime?: number | null };
+        if ('nextResetTime' in errorData && (typeof errorData.nextResetTime === 'number' || errorData.nextResetTime === null)) {
+          error.nextResetTime = errorData.nextResetTime;
+        }
+        return err(error);
       }
       if (errorData.code === 'ACCOUNT_NOT_FOUND') {
         return err(new Error('ACCOUNT_NOT_FOUND'));

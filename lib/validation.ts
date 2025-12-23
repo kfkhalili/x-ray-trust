@@ -35,15 +35,19 @@ const isCheckoutResponse = (data: unknown): data is { url: string } => {
 
 /**
  * Type guard for error response.
+ * Includes optional nextResetTime for countdown display.
  */
-const isErrorResponse = (data: unknown): data is { error: string; code: string } => {
+const isErrorResponse = (data: unknown): data is { error: string; code: string; nextResetTime?: number | null } => {
   return (
     typeof data === 'object' &&
     data !== null &&
     'error' in data &&
     'code' in data &&
     typeof (data as { error: unknown }).error === 'string' &&
-    typeof (data as { code: unknown }).code === 'string'
+    typeof (data as { code: unknown }).code === 'string' &&
+    (!('nextResetTime' in data) || 
+     typeof (data as { nextResetTime: unknown }).nextResetTime === 'number' ||
+     (data as { nextResetTime: unknown }).nextResetTime === null)
   );
 };
 
@@ -57,7 +61,7 @@ export const parseCheckoutResponse = (json: unknown): Result<{ url: string }, Er
 /**
  * Safely parses error response JSON.
  */
-export const parseErrorResponse = (json: unknown): Result<{ error: string; code: string }, Error> => {
+export const parseErrorResponse = (json: unknown): Result<{ error: string; code: string; nextResetTime?: number | null }, Error> => {
   return parseJson(json, isErrorResponse);
 };
 
