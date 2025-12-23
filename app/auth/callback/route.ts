@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextRequest } from 'next/server';
-import { redirect } from 'next/navigation';
+import { createClient } from "@/lib/supabase/server";
+import { NextRequest } from "next/server";
+import { redirect } from "next/navigation";
 
 /**
  * OAuth callback handler for Supabase.
@@ -11,8 +11,8 @@ import { redirect } from 'next/navigation';
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') || '/';
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") || "/";
 
   if (code) {
     const supabase = await createClient();
@@ -27,4 +27,3 @@ export async function GET(request: NextRequest) {
   // If no code or error, redirect to home with error message
   redirect(`/?error=auth_failed`);
 }
-

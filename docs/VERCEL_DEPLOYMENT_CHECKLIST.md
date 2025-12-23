@@ -16,9 +16,9 @@ Quick reference for deploying X-Ray Trust to Vercel.
 ### 2. Stripe Setup (Test Mode First)
 
 - [ ] Create 3 products in Stripe Dashboard (Test Mode):
-  - 50 Credits - €4.99
-  - 100 Credits - €9.99
-  - 250 Credits - €19.99
+  - **Basic Pack - 50 Credits (€4.99)**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts and discover who you can trust."
+  - **Popular Pack - 100 Credits (€9.99)**: "Most popular choice! Double the credits for the same price per credit. Verify 100 Twitter accounts."
+  - **Pro Pack - 250 Credits (€19.99)**: "For power users and businesses. Verify 250 Twitter accounts and save 20% compared to smaller packs."
 - [ ] Copy Price IDs (start with `price_...`)
 - [ ] Update `lib/stripe.ts` with Price IDs
 - [ ] Commit and push to GitHub

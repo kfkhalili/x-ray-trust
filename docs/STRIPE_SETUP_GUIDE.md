@@ -64,7 +64,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 **Product 1: Basic Pack**
 
 - **Name**: "Basic Pack - 50 Credits"
-- **Description**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts."
+- **Description**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts and discover who you can trust."
 - **Pricing**:
   - Type: **One-time**
   - Price: **€4.99 EUR**
@@ -86,7 +86,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 **Product 3: Pro Pack**
 
 - **Name**: "Pro Pack - 250 Credits"
-- **Description**: "For power users. Verify 250 Twitter accounts. Save 20%."
+- **Description**: "For power users and businesses. Verify 250 Twitter accounts and save 20% compared to smaller packs."
 - **Pricing**:
   - Type: **One-time**
   - Price: **€19.99 EUR**

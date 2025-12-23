@@ -62,10 +62,10 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 2. Click **OAuth Apps** → **New OAuth App**
 3. Fill in:
    - **Application name**: X-Ray Trust (or your app name)
-   - **Homepage URL**: 
+   - **Homepage URL**:
      - `http://localhost:3000` (for development)
      - `https://yourdomain.com` (for production)
-   - **Authorization callback URL**: 
+   - **Authorization callback URL**:
      - `https://<your-project-ref>.supabase.co/auth/v1/callback`
      - Replace `<your-project-ref>` with your Supabase project reference
      - Example: `https://abcdefghijklmnop.supabase.co/auth/v1/callback`

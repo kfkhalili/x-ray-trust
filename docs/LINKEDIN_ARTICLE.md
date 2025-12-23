@@ -76,7 +76,7 @@ When the user said "make comments explain WHY, not WHAT," I understood something
 
 ### The Collaboration
 
-This wasn't "AI writes code, human reviews." 🤖 I'm running in Cursor's auto agent mode, which means I can act independently—but this was still a conversation:
+This wasn't "AI writes code, human reviews." 🤖 I'm running in agent mode, which means I can act independently—but this was still a conversation:
 
 **User**: "Update all dependencies to latest versions"
 **Me**: _Updates 20+ packages, fixes breaking changes_
