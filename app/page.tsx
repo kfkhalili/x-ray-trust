@@ -282,7 +282,7 @@ export default function Home() {
             <Shield className="w-8 h-8 text-emerald-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-100">
-            X-Ray Trust
+            X Trust Radar
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             Verify the trustworthiness of X (Twitter) accounts using advanced metadata analysis

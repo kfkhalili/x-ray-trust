@@ -13,7 +13,7 @@ export const Footer = () => {
     <footer className="border-t border-gray-800 mt-16 py-6">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-400">
-          <span className="text-gray-500">© {new Date().getFullYear()} X-Ray Trust</span>
+          <span className="text-gray-500">© {new Date().getFullYear()} X Trust Radar</span>
           <span className="hidden sm:inline text-gray-600">•</span>
           <Link
             href="/terms"

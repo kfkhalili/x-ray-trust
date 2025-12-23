@@ -1,6 +1,6 @@
 # Vercel Deployment Checklist
 
-Quick reference for deploying X-Ray Trust to Vercel.
+Quick reference for deploying X Trust Radar to Vercel.
 
 ## Pre-Deployment Checklist
 
@@ -16,7 +16,7 @@ Quick reference for deploying X-Ray Trust to Vercel.
 ### 2. Stripe Setup (Test Mode First)
 
 - [ ] Create 3 products in Stripe Dashboard (Test Mode):
-  - **Basic Pack - 50 Credits (€4.99)**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts and discover who you can trust."
+  - **Basic Pack - 50 Credits (€4.99)**: "Perfect for trying out X Trust Radar. Verify 50 Twitter accounts and discover who you can trust."
     - Tax Category: **General - Electronically supplied services** (`txcd_10301001`)
   - **Popular Pack - 100 Credits (€9.99)**: "Most popular choice! Double the credits for the same price per credit. Verify 100 Twitter accounts."
     - Tax Category: **General - Electronically supplied services** (`txcd_10301001`)
@@ -43,7 +43,7 @@ Quick reference for deploying X-Ray Trust to Vercel.
 
 1. Go to https://vercel.com
 2. Click "Add New Project"
-3. Import `kfkhalili/x-ray-trust` from GitHub
+3. Import `kfkhalili/xtrustradar` from GitHub
 4. Vercel auto-detects Next.js ✅
 
 ### Step 2: Environment Variables
@@ -65,7 +65,7 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 
 1. Click "Deploy"
 2. Wait for build (~2-3 minutes)
-3. Copy your Vercel URL (e.g., `x-ray-trust.vercel.app`)
+3. Copy your Vercel URL (e.g., `xtrustradar.vercel.app`)
 
 ### Step 4: Configure Stripe Webhook
 

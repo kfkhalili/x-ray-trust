@@ -1,6 +1,6 @@
 # OAuth Setup Guide (Google & GitHub)
 
-This guide explains how to set up Google and GitHub OAuth login for X-Ray Trust.
+This guide explains how to set up Google and GitHub OAuth login for X Trust Radar.
 
 ## Overview
 
@@ -20,7 +20,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 4. Click **Create Credentials** → **OAuth client ID**
 5. If prompted, configure OAuth consent screen first:
    - User Type: **External** (unless you have Google Workspace)
-   - App name: **X-Ray Trust** (or your app name)
+   - App name: **X Trust Radar** (or your app name)
    - User support email: Your email
    - Developer contact: Your email
    - Click **Save and Continue**
@@ -30,7 +30,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 
 6. Create OAuth Client ID:
    - Application type: **Web application**
-   - Name: **X-Ray Trust Web Client**
+   - Name: **X Trust Radar Web Client**
    - **Authorized JavaScript origins:**
      - `http://localhost:3000` (for local development)
      - `https://yourdomain.com` (your production URL)
@@ -61,7 +61,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click **OAuth Apps** → **New OAuth App**
 3. Fill in:
-   - **Application name**: X-Ray Trust (or your app name)
+   - **Application name**: X Trust Radar (or your app name)
    - **Homepage URL**:
      - `http://localhost:3000` (for development)
      - `https://yourdomain.com` (for production)

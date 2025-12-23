@@ -67,7 +67,7 @@ export default function CookiesPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">6. Contact</h2>
             <p>
-              For questions about our use of cookies, please contact us at: <a href="mailto:privacy@xraytrust.com" className="text-emerald-400 hover:text-emerald-300 underline">privacy@xraytrust.com</a>
+              For questions about our use of cookies, please contact us at: <a href="mailto:privacy@xtrustradar.com" className="text-emerald-400 hover:text-emerald-300 underline">privacy@xtrustradar.com</a>
             </p>
             <p className="mt-2 text-sm text-gray-400">
               (Note: Update this email address with your actual contact information before production deployment)

@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">1. Acceptance of Terms</h2>
             <p>
-              By accessing and using X-Ray Trust, you accept and agree to be bound by the terms
+              By accessing and using X Trust Radar, you accept and agree to be bound by the terms
               and provision of this agreement.
             </p>
           </section>
@@ -29,7 +29,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">2. Service Description</h2>
             <p>
-              X-Ray Trust provides trustworthiness verification services for X (Twitter) accounts
+              X Trust Radar provides trustworthiness verification services for X (Twitter) accounts
               using metadata analysis. The service is provided "as is" without warranties of any kind.
             </p>
           </section>
@@ -62,7 +62,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">5. Limitation of Liability</h2>
             <p>
-              X-Ray Trust shall not be liable for any indirect, incidental, special, or consequential
+              X Trust Radar shall not be liable for any indirect, incidental, special, or consequential
               damages resulting from the use or inability to use the service.
             </p>
           </section>
@@ -80,7 +80,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">7. Contact</h2>
             <p>
-              For questions about these Terms, please contact us at: <a href="mailto:legal@xraytrust.com" className="text-emerald-400 hover:text-emerald-300 underline">legal@xraytrust.com</a>
+              For questions about these Terms, please contact us at: <a href="mailto:legal@xtrustradar.com" className="text-emerald-400 hover:text-emerald-300 underline">legal@xtrustradar.com</a>
             </p>
             <p className="mt-2 text-sm text-gray-400">
               (Note: Update this email address with your actual contact information before production deployment)

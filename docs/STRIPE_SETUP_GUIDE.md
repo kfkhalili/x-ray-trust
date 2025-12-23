@@ -1,4 +1,4 @@
-# Stripe Setup Guide for X-Ray Trust
+# Stripe Setup Guide for X Trust Radar
 
 ## Recommended Pricing Strategy
 
@@ -64,7 +64,7 @@ For now, stick with one-time payments. Consider adding monthly subscriptions lat
 **Product 1: Basic Pack**
 
 - **Name**: "Basic Pack - 50 Credits"
-- **Description**: "Perfect for trying out X-Ray Trust. Verify 50 Twitter accounts and discover who you can trust."
+- **Description**: "Perfect for trying out X Trust Radar. Verify 50 Twitter accounts and discover who you can trust."
 - **Pricing**:
   - Type: **One-time**
   - Price: **€4.99 EUR**
@@ -140,17 +140,17 @@ The statement descriptor is what appears on your customer's credit card statemen
 - **Should be recognizable** - customers should know what the charge is for
 - **No VAT info needed** - even with Kleinunternehmerregelung, the descriptor is just for identification
 
-**Recommended for X-Ray Trust:**
+**Recommended for X Trust Radar:**
 
-- `XRAYTRUST` (9 characters - simple and clear)
-- `XRAY TRUST` (10 characters - more readable)
-- `XRAYTRUST DE` (13 characters - indicates Germany if desired)
+- `XTRUSTRADAR` (11 characters - simple and clear)
+- `X TRUST RADAR` (13 characters - more readable)
+- `XTRUSTRADAR DE` (15 characters - indicates Germany if desired)
 
 **How to set it:**
 
 1. Add to your `.env.local`:
    ```
-   STRIPE_STATEMENT_DESCRIPTOR=XRAYTRUST
+   STRIPE_STATEMENT_DESCRIPTOR=XTRUSTRADAR
    ```
 2. The code automatically uses this in checkout sessions
 3. You can also set a default in Stripe Dashboard → Settings → Business details → Statement descriptor

@@ -37,7 +37,7 @@ const createCheckoutSession = async (
     // Statement descriptor appears on customer's credit card statement
     // Requirements: 5-22 characters, letters/numbers/spaces only
     // For Kleingewerbe: No VAT info needed, just business name
-    const statementDescriptor = process.env.STRIPE_STATEMENT_DESCRIPTOR || 'XRAYTRUST';
+    const statementDescriptor = process.env.STRIPE_STATEMENT_DESCRIPTOR || 'XTRUSTRADAR';
 
     const session = await stripe().checkout.sessions.create({
       mode: 'payment',

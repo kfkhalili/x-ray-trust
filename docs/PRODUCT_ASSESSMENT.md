@@ -1,8 +1,8 @@
-# X-Ray Trust - Product Owner Assessment
+# X Trust Radar - Product Owner Assessment
 
 ## Product Overview
 
-**X-Ray Trust** is a Micro SaaS that verifies the trustworthiness of X (Twitter) accounts using behavioral analysis. It solves the problem of bot detection and impersonation verification in an era where verification badges can be purchased.
+**X Trust Radar** is a Micro SaaS that verifies the trustworthiness of X (Twitter) accounts using behavioral analysis. It solves the problem of bot detection and impersonation verification in an era where verification badges can be purchased.
 
 ## Market Opportunity
 

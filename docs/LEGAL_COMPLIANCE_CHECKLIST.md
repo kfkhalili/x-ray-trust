@@ -27,8 +27,8 @@
 
 ### Critical (Must Fix)
 1. **Update Contact Emails**
-   - Replace `privacy@xraytrust.com` with actual email
-   - Replace `legal@xraytrust.com` with actual email
+   - Replace `privacy@xtrustradar.com` with actual email
+   - Replace `legal@xtrustradar.com` with actual email
    - Files: `app/privacy/page.tsx`, `app/terms/page.tsx`, `app/cookies/page.tsx`
 
 2. **Update Jurisdiction in Terms**

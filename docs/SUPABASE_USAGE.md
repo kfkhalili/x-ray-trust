@@ -1,4 +1,4 @@
-# What Supabase is Used For in X-Ray Trust
+# What Supabase is Used For in X Trust Radar
 
 ## Overview
 

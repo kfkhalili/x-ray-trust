@@ -1,10 +1,10 @@
-# X-Ray Trust
+# X Trust Radar
 
 A Micro SaaS that verifies the trustworthiness of X (Twitter) accounts using behavioral signals and metadata analysis.
 
-## Why X-Ray Trust?
+## Why X Trust Radar?
 
-Social media impersonation and bot accounts are increasingly sophisticated. Traditional verification badges (Blue checkmarks) can be purchased, making them unreliable trust signals. X-Ray Trust analyzes behavioral patterns that are difficult for bots to fake: account longevity, organic follower growth, genuine engagement, and human curation (being added to lists).
+Social media impersonation and bot accounts are increasingly sophisticated. Traditional verification badges (Blue checkmarks) can be purchased, making them unreliable trust signals. X Trust Radar analyzes behavioral patterns that are difficult for bots to fake: account longevity, organic follower growth, genuine engagement, and human curation (being added to lists).
 
 ## Tech Stack
 

@@ -111,12 +111,12 @@ Pro:     250 Credits - €19.99 (€0.08/credit) - 20% savings
 
 **Recommended:**
 
-- `XRAYTRUST` (9 characters - simple and clear)
-- `XRAY TRUST` (10 characters - more readable)
+- `XTRUSTRADAR` (11 characters - simple and clear)
+- `X TRUST RADAR` (13 characters - more readable)
 
 **How to set:**
 
-1. Add `STRIPE_STATEMENT_DESCRIPTOR=XRAYTRUST` to your `.env.local`
+1. Add `STRIPE_STATEMENT_DESCRIPTOR=XTRUSTRADAR` to your `.env.local`
 2. Or set default in Stripe Dashboard → Settings → Business details → Statement descriptor
 
 ### Invoice Requirements (Germany)

@@ -1,6 +1,6 @@
 # Deployment Guide: Vercel + Supabase (Free Tier)
 
-This guide walks you through deploying X-Ray Trust to production using free tiers of Vercel and Supabase.
+This guide walks you through deploying X Trust Radar to production using free tiers of Vercel and Supabase.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ This guide walks you through deploying X-Ray Trust to production using free tier
 
 1. Go to https://supabase.com
 2. Click "New Project"
-3. Choose organization and name it `x-ray-trust`
+3. Choose organization and name it `xtrustradar`
 4. Set database password (save this!)
 5. Choose region closest to your users
 6. Wait for project to initialize (~2 minutes)
@@ -81,7 +81,7 @@ Commit and push to GitHub.
 
 1. Go to https://vercel.com
 2. Click "Add New Project"
-3. Import from GitHub: `kfkhalili/x-ray-trust`
+3. Import from GitHub: `kfkhalili/xtrustradar`
 4. Vercel will auto-detect Next.js
 
 ### 3.2 Configure Environment Variables
@@ -106,7 +106,7 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 
 1. Click "Deploy"
 2. Wait for build to complete (~2-3 minutes)
-3. Copy your Vercel URL (e.g., `x-ray-trust.vercel.app`)
+3. Copy your Vercel URL (e.g., `xtrustradar.vercel.app`)
 
 ### 3.4 Update Webhook URL
 
