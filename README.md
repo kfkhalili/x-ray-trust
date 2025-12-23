@@ -177,7 +177,7 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 - **Supabase (Free)**: 500MB database, 2GB bandwidth, 50K MAU
 - **Stripe**: 2.9% + $0.30 per transaction (no monthly fees)
 
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For detailed deployment instructions, see [DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
 ## Design Principles
 
