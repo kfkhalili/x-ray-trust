@@ -88,15 +88,21 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 
 ## Step 3: Configure for Local Development (If Using Local Supabase)
 
+**⚠️ IMPORTANT: These environment variables are ONLY needed for local Supabase development.**
+
+**If you're using production Supabase** (which is the default), you do NOT need these variables. OAuth is configured in the Supabase Dashboard, and your Next.js app doesn't need these env vars.
+
 **If you're using local Supabase** (`npx supabase start`), you need to configure OAuth in `supabase/config.toml`:
 
-1. **Add OAuth credentials to `.env.local`**:
+1. **Add OAuth credentials to `.env.local`** (for local development only):
    ```
    SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your_google_client_id_here
    SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your_google_client_secret_here
    SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=your_github_client_id_here
    SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=your_github_client_secret_here
    ```
+
+   **Do NOT add these to Vercel environment variables** - they're only for local Supabase!
 
 2. **Restart local Supabase**:
    ```bash
@@ -154,7 +160,8 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 
 ## Important Notes
 
-- **No environment variables needed** - OAuth credentials are stored in Supabase Dashboard
+- **Production Supabase**: No environment variables needed in your Next.js app - OAuth credentials are stored in Supabase Dashboard
+- **Local Supabase**: You need `SUPABASE_AUTH_EXTERNAL_*` env vars in `.env.local` (but NOT in Vercel!)
 - **Same credentials for dev and prod** - You can use the same OAuth apps for both
 - **Callback URL is always Supabase** - Your app redirects to `/auth/callback`, which Supabase handles
 - **Profile creation** - The `handle_new_user` trigger automatically creates a profile with 3 credits when users sign up via OAuth

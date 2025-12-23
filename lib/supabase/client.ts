@@ -5,7 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
  *
  * Uses @supabase/ssr for cookie-based auth that works seamlessly with Next.js
  * App Router. Cookies are managed automatically—no manual token handling needed.
- * 
+ *
  * Note: createBrowserClient handles cookies automatically via browser's native
  * cookie handling. No manual cookie management needed.
  */

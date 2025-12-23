@@ -30,15 +30,15 @@ export const AuthButton = () => {
         supabase.auth.getUser(),
         supabase.auth.getSession(),
       ]);
-      
+
       console.log('Checking user:', {
         user: userResult.data.user?.email || 'no user',
         session: sessionResult.data.session ? 'has session' : 'no session',
         error: userResult.error?.message || sessionResult.error?.message || 'none',
       });
-      
+
       const currentUser = userResult.data.user || sessionResult.data.session?.user || null;
-      
+
       if (currentUser) {
         console.log('Setting user:', currentUser.email);
         setUser(currentUser);
