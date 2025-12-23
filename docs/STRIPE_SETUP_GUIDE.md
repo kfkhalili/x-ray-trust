@@ -129,17 +129,20 @@ const creditPacks = [
 The statement descriptor is what appears on your customer's credit card statement. This is **required** and helps prevent chargebacks.
 
 **Requirements:**
+
 - **5-22 characters** (Stripe requirement)
 - **Only letters, numbers, and spaces** (no special characters like `@`, `-`, `_`)
 - **Should be recognizable** - customers should know what the charge is for
 - **No VAT info needed** - even with Kleinunternehmerregelung, the descriptor is just for identification
 
 **Recommended for X-Ray Trust:**
+
 - `XRAYTRUST` (9 characters - simple and clear)
 - `XRAY TRUST` (10 characters - more readable)
 - `XRAYTRUST DE` (13 characters - indicates Germany if desired)
 
 **How to set it:**
+
 1. Add to your `.env.local`:
    ```
    STRIPE_STATEMENT_DESCRIPTOR=XRAYTRUST
@@ -148,6 +151,7 @@ The statement descriptor is what appears on your customer's credit card statemen
 3. You can also set a default in Stripe Dashboard → Settings → Business details → Statement descriptor
 
 **For Kleingewerbe/Kleinunternehmerregelung:**
+
 - ✅ No VAT in the descriptor (it's just for card statements)
 - ✅ Keep it simple and recognizable
 - ✅ Match your business name if possible

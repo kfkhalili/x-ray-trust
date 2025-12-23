@@ -167,9 +167,13 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 
 ### Testing Deployment
 
-1. **Authentication**: Sign in with email magic link
+1. **Authentication**: Sign in with email magic link, Google, or GitHub OAuth
 2. **Verification**: Try verifying a Twitter account (3 free per IP)
 3. **Payments**: Test with Stripe test card `4242 4242 4242 4242`
+
+### OAuth Setup (Google & GitHub)
+
+See [docs/OAUTH_SETUP.md](./docs/OAUTH_SETUP.md) for detailed instructions on setting up Google and GitHub OAuth login. OAuth credentials are configured in Supabase Dashboard, not in environment variables.
 
 ### Free Tier Limits
 
