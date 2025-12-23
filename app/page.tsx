@@ -128,6 +128,16 @@ export default function Home() {
 
     loadUser();
 
+    // Check for successful OAuth redirect and refresh auth state
+    const authParams = new URLSearchParams(window.location.search);
+    if (authParams.get('auth') === 'success') {
+      // Coming from successful OAuth - refresh user state
+      setTimeout(loadUser, 100);
+      setTimeout(loadUser, 500);
+      // Clean the URL param
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {

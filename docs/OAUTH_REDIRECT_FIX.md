@@ -13,6 +13,7 @@ The code was using `window.location.origin` which works for local development bu
 ### 1. Code Fix (Already Done ✅)
 
 The code now uses `NEXT_PUBLIC_APP_URL` if set:
+
 - Production: Uses `NEXT_PUBLIC_APP_URL` from environment variables
 - Local dev: Falls back to `window.location.origin` (localhost:3000)
 
@@ -49,6 +50,7 @@ The code now uses `NEXT_PUBLIC_APP_URL` if set:
 ### 4. Verify Google OAuth Redirect URI
 
 In Google Cloud Console:
+
 1. Go to your OAuth Client
 2. **Authorized redirect URIs** should include:
    - `https://<your-project-ref>.supabase.co/auth/v1/callback` (Supabase callback)
@@ -69,6 +71,7 @@ In Google Cloud Console:
 ## Why Localhost Was Being Used
 
 If `NEXT_PUBLIC_APP_URL` is not set:
+
 - The code falls back to `window.location.origin`
 - On localhost, this is `http://localhost:3000`
 - On production, this should be your production URL
@@ -79,13 +82,16 @@ If `NEXT_PUBLIC_APP_URL` is not set:
 After configuring:
 
 1. ✅ Check Supabase Dashboard → Authentication → URL Configuration
+
    - Site URL is set to production URL
    - Redirect URLs include production callback URL
 
 2. ✅ Check Vercel Environment Variables
+
    - `NEXT_PUBLIC_APP_URL` is set to production URL
 
 3. ✅ Test OAuth login
+
    - Should redirect to production URL, not localhost
 
 4. ✅ Check browser network tab
@@ -101,4 +107,3 @@ If it's still redirecting to localhost:
 3. **Verify NEXT_PUBLIC_APP_URL** is actually set in Vercel (redeploy if needed)
 4. **Check Supabase logs** for redirect errors
 5. **Verify the redirect URL** in Supabase matches exactly (no trailing slashes)
-

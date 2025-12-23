@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       // Successful authentication, redirect to home (or next URL)
-      redirect(next);
+      // Add a query param to signal successful auth so the client can refresh
+      const redirectUrl = next.includes('?') ? `${next}&auth=success` : `${next}?auth=success`;
+      redirect(redirectUrl);
     }
   }
 

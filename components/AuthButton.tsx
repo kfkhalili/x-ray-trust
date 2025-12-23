@@ -23,24 +23,61 @@ export const AuthButton = () => {
   const supabase = createClient();
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
+    // Check current session on mount and after redirects
+    const checkUser = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       setUser(currentUser);
-    });
+    };
+
+    checkUser();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setUser(session?.user ?? null);
         if (event === 'SIGNED_IN') {
           setShowSignIn(false);
           setMessage(null);
+          // Force a refresh of user data after sign in
+          const { data: { user: updatedUser } } = await supabase.auth.getUser();
+          setUser(updatedUser);
         }
       }
     );
 
+    // Check auth state after OAuth redirect (callback completes and redirects to home)
+    // Check multiple times to catch timing issues with cookie propagation
+    const checkAfterRedirect = () => {
+      // Check immediately
+      checkUser();
+      // Check again after short delays to catch any timing issues
+      setTimeout(checkUser, 100);
+      setTimeout(checkUser, 500);
+      setTimeout(checkUser, 1000);
+    };
+
+    // If coming from OAuth callback (no error in URL), check auth state
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('auth') && params.get('auth') === 'success') {
+      // Coming from successful OAuth - check auth state immediately and clean URL
+      checkAfterRedirect();
+      // Clean the URL param after checking
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    } else if (!params.has('error') && !params.has('checkout')) {
+      // Might be coming from successful OAuth - check auth state
+      checkAfterRedirect();
+    }
+
+    // Also check on focus (user might have completed OAuth in another tab/window)
+    const handleFocus = () => {
+      checkUser();
+    };
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
     };
   }, [supabase]);
 
@@ -75,7 +112,7 @@ export const AuthButton = () => {
     setMessage(null);
 
     // Use NEXT_PUBLIC_APP_URL if set (for production), otherwise use current origin (for local dev)
-    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL 
+    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
       ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
       : `${window.location.origin}/auth/callback`;
 

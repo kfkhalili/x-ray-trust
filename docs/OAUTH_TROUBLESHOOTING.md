@@ -116,6 +116,7 @@ Make sure your OAuth apps have the correct redirect URL:
 **If you're on production but OAuth redirects to localhost:**
 
 1. **Check Supabase URL Configuration**:
+
    - Go to Supabase Dashboard → Authentication → **URL Configuration**
    - **Site URL** should be your production URL (e.g., `https://www.xtrustradar.com`)
    - **Redirect URLs** must include your production callback URL:
@@ -123,6 +124,7 @@ Make sure your OAuth apps have the correct redirect URL:
    - Click **Save**
 
 2. **Set NEXT_PUBLIC_APP_URL environment variable**:
+
    - In Vercel: Settings → Environment Variables
    - Add: `NEXT_PUBLIC_APP_URL=https://www.xtrustradar.com`
    - Redeploy your application
