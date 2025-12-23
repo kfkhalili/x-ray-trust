@@ -123,6 +123,62 @@ npx tsx scripts/add-credits.ts user@example.com 100
 stripe listen --forward-to localhost:3000/api/webhook
 ```
 
+## Deployment
+
+### Quick Deploy to Vercel + Supabase
+
+1. **Set up Supabase**:
+   - Create project at https://supabase.com
+   - Run `supabase/schema.sql` in SQL Editor
+   - Copy credentials from Project Settings → API
+
+2. **Configure Stripe**:
+   - Create products in Stripe Dashboard (50, 120, 250 credits)
+   - Copy Price IDs and update `lib/stripe.ts`
+   - Get API keys from Developers → API keys
+
+3. **Deploy to Vercel**:
+   - Import GitHub repository
+   - Add environment variables (see `.env.example`)
+   - Deploy and get your URL
+
+4. **Set up Webhook**:
+   - Add webhook endpoint in Stripe: `https://your-app.vercel.app/api/webhook`
+   - Select event: `checkout.session.completed`
+   - Copy signing secret to Vercel env vars
+
+5. **Configure Twitter API**:
+   - Get key from https://twitterapi.io
+   - Add to Vercel environment variables
+
+### Environment Variables
+
+Add these to Vercel (or `.env.local` for local dev):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
+TWITTER_API_KEY=your_twitterapi_io_key
+STRIPE_SECRET_KEY=sk_live_... (or sk_test_...)
+STRIPE_WEBHOOK_SECRET=whsec_... (after webhook setup)
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+```
+
+### Testing Deployment
+
+1. **Authentication**: Sign in with email magic link
+2. **Verification**: Try verifying a Twitter account (3 free per IP)
+3. **Payments**: Test with Stripe test card `4242 4242 4242 4242`
+
+### Free Tier Limits
+
+- **Vercel (Hobby)**: Unlimited deployments, 100GB bandwidth/month
+- **Supabase (Free)**: 500MB database, 2GB bandwidth, 50K MAU
+- **Stripe**: 2.9% + $0.30 per transaction (no monthly fees)
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Design Principles
 
 - **Pure Functions**: Trust calculations are stateless transformations
