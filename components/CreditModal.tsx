@@ -26,10 +26,12 @@ export const CreditModal = ({ isOpen, onClose, currentCredits, user }: CreditMod
   const [selectedCredits, setSelectedCredits] = useState<number | null>(null);
 
   // Credit pack options (should match CREDIT_PACKS in lib/stripe.ts)
+  // Recommended for German launch: 3 tiers in EUR
+  // Can be updated after creating products in Stripe Dashboard
   const creditPacks = [
-    { credits: 50, price: 5, label: '50 Credits - $5' },
-    { credits: 120, price: 10, label: '120 Credits - $10' },
-    { credits: 250, price: 20, label: '250 Credits - $20' },
+    { credits: 50, price: 4.99, label: '50 Credits - €4.99', popular: false },
+    { credits: 100, price: 9.99, label: '100 Credits - €9.99', popular: true },
+    { credits: 250, price: 19.99, label: '250 Credits - €19.99', popular: false },
   ];
 
   const handleCheckout = async () => {
@@ -127,9 +129,16 @@ export const CreditModal = ({ isOpen, onClose, currentCredits, user }: CreditMod
             >
               <div className="flex items-center justify-between">
                 <div className="text-left">
-                  <div className="font-semibold text-gray-100">{pack.label}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-gray-100">{pack.label}</div>
+                    {pack.popular && (
+                      <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">
+                        Popular
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-400 mt-1">
-                    ${(pack.price / pack.credits).toFixed(3)} per credit
+                    €{(pack.price / pack.credits).toFixed(3)} per credit
                   </div>
                 </div>
                 {selectedCredits === pack.credits && (
