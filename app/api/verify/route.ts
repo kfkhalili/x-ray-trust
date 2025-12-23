@@ -8,12 +8,36 @@ import { Result, ok, err } from 'neverthrow';
 export const dynamic = 'force-dynamic';
 
 /**
- * In-memory tracking of free lookups by IP address.
+ * In-memory tracking of free lookups by IP address for unregistered users.
  *
  * Why in-memory? Simple MVP implementation. In production, use Redis or a database table
  * for persistence across server restarts and multi-instance deployments.
+ *
+ * NOTE: In development, this Map resets on every code change/server restart.
+ * This is expected behavior. In production, the server stays running and the Map persists.
+ *
+ * Regeneration: Free lookups reset hourly (1 hour) from the first lookup.
+ * This allows users to try the service more frequently while still encouraging sign-up.
  */
-const freeLookupsByIp = new Map<string, number>();
+interface FreeLookupData {
+  count: number;
+  firstLookupTime: number; // Timestamp of first lookup (used for hourly reset)
+  lookupHistory: number[]; // Array of timestamps for all lookups (for usage analytics)
+}
+
+const freeLookupsByIp = new Map<string, FreeLookupData>();
+
+/**
+ * Free lookup regeneration period in milliseconds (1 hour).
+ * Unregistered users get 3 free lookups per hour, resetting 1 hour after their first lookup.
+ * This is more generous than daily limits and allows users to try the service more frequently.
+ */
+const FREE_LOOKUP_RESET_PERIOD_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Maximum free lookups per reset period for unregistered users.
+ */
+const MAX_FREE_LOOKUPS = 3;
 
 /**
  * Gets the client IP address from the request.
@@ -32,24 +56,109 @@ const getClientIp = (request: NextRequest): string => {
 /**
  * Checks if an IP address has free lookups remaining.
  *
+ * Automatically resets lookups if 1 hour has passed since the first lookup.
  * Returns the number of remaining free lookups (0-3).
+ *
+ * Also tracks usage history for analytics - we measure usage rather than strictly limit.
  */
 const getRemainingFreeLookups = (ip: string): number => {
-  const used = freeLookupsByIp.get(ip) ?? 0;
-  return Math.max(0, 3 - used);
+  const data = freeLookupsByIp.get(ip);
+
+  // No data means user has all lookups available
+  if (!data) {
+    return MAX_FREE_LOOKUPS;
+  }
+
+  // Check if 1 hour has passed since first lookup
+  const now = Date.now();
+  const timeSinceFirstLookup = now - data.firstLookupTime;
+
+  if (timeSinceFirstLookup >= FREE_LOOKUP_RESET_PERIOD_MS) {
+    // Reset: 1 hour has passed, clear the data
+    freeLookupsByIp.delete(ip);
+    return MAX_FREE_LOOKUPS;
+  }
+
+  // Clean up old lookups from history (older than reset period)
+  // This helps with memory management and accurate counting
+  const validLookups = data.lookupHistory.filter(
+    (timestamp) => now - timestamp < FREE_LOOKUP_RESET_PERIOD_MS
+  );
+
+  // Update count based on valid lookups
+  const currentCount = validLookups.length;
+
+  // Return remaining lookups
+  return Math.max(0, MAX_FREE_LOOKUPS - currentCount);
+};
+
+/**
+ * Gets the time until the next free lookup reset (in milliseconds).
+ * Returns null if lookups are available or if no data exists.
+ */
+const getTimeUntilNextReset = (ip: string): number | null => {
+  const data = freeLookupsByIp.get(ip);
+
+  // No data means user has all lookups available
+  if (!data) {
+    return null;
+  }
+
+  const now = Date.now();
+  const timeSinceFirstLookup = now - data.firstLookupTime;
+
+  // If reset period has passed, no need to wait
+  if (timeSinceFirstLookup >= FREE_LOOKUP_RESET_PERIOD_MS) {
+    return null;
+  }
+
+  // Calculate time until reset
+  const timeUntilReset = FREE_LOOKUP_RESET_PERIOD_MS - timeSinceFirstLookup;
+  return timeUntilReset;
 };
 
 /**
  * Records a free lookup for an IP address.
  *
+ * Automatically resets lookups if 1 hour has passed since the first lookup.
+ * Tracks full usage history for analytics - we measure usage rather than strictly limit.
  * Returns true if the lookup was allowed, false if limit exceeded.
  */
 const recordFreeLookup = (ip: string): boolean => {
-  const used = freeLookupsByIp.get(ip) ?? 0;
-  if (used >= 3) {
+  const data = freeLookupsByIp.get(ip);
+  const now = Date.now();
+
+  // If no data or 1 hour has passed, reset
+  if (!data || (now - data.firstLookupTime >= FREE_LOOKUP_RESET_PERIOD_MS)) {
+    // First lookup or reset after 1 hour
+    freeLookupsByIp.set(ip, {
+      count: 1,
+      firstLookupTime: now,
+      lookupHistory: [now], // Track this lookup
+    });
+    return true;
+  }
+
+  // Clean up old lookups from history (older than reset period)
+  const validLookups = data.lookupHistory.filter(
+    (timestamp) => now - timestamp < FREE_LOOKUP_RESET_PERIOD_MS
+  );
+
+  // Check if limit exceeded based on valid lookups
+  if (validLookups.length >= MAX_FREE_LOOKUPS) {
     return false; // Limit exceeded
   }
-  freeLookupsByIp.set(ip, used + 1);
+
+  // Add this lookup to history
+  validLookups.push(now);
+
+  // Update data with new count and history
+  freeLookupsByIp.set(ip, {
+    count: validLookups.length,
+    firstLookupTime: data.firstLookupTime, // Keep original first lookup time
+    lookupHistory: validLookups,
+  });
+
   return true;
 };
 
@@ -95,6 +204,12 @@ const fetchXAccountData = async (username: string): Promise<Result<XRawData, Err
       if (response.status === 404) {
         return err(new Error('Account not found'));
       }
+
+      // Handle rate limiting (429 Too Many Requests)
+      if (response.status === 429) {
+        return err(new Error('RATE_LIMIT_EXCEEDED'));
+      }
+
       return err(new Error(`Twitter API error: ${response.status}`));
     }
 
@@ -218,8 +333,10 @@ const deductCredit = async (userId: string): Promise<Result<void, Error>> => {
  * This ensures users aren't charged for failed lookups (API errors,
  * non-existent accounts). Only successful trust reports cost credits.
  *
- * Free lookups: Unauthenticated users get 3 free lookups tracked by IP address.
- * After 3 free lookups, authentication is required.
+ * Free lookups: Unregistered (unauthenticated) users get 3 free lookups per hour tracked by IP address.
+ * Lookups reset every hour from the first lookup, allowing users to try the service more frequently.
+ * After 3 free lookups in an hour, authentication is required to continue.
+ * Usage is tracked for analytics - we measure usage rather than strictly limit.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -305,8 +422,18 @@ export async function POST(request: NextRequest) {
   const accountDataResult = await fetchXAccountData(validatedBody.username);
 
   if (accountDataResult.isErr()) {
-    // All errors result in "account not found" for user-facing messages
-    console.error('Failed to fetch account data:', accountDataResult.error.message);
+    const errorMessage = accountDataResult.error.message;
+    console.error('Failed to fetch account data:', errorMessage);
+
+    // Handle rate limit errors specifically
+    if (errorMessage === 'RATE_LIMIT_EXCEEDED') {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Rate limit exceeded. Please wait a moment and try again.', code: 'RATE_LIMIT_EXCEEDED' },
+        { status: 429 }
+      );
+    }
+
+    // All other errors result in "account not found" for user-facing messages
     return NextResponse.json<ErrorResponse>(
       { error: 'Account not found or API error. Check server logs for details.', code: 'ACCOUNT_NOT_FOUND' },
       { status: 404 }
@@ -343,11 +470,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Include remaining free lookups in response for unauthenticated users
-  const responseData: TrustReport & { remainingFreeLookups?: number } = trustReport;
+  // Include remaining free lookups and reset time in response for unauthenticated users
+  const responseData: TrustReport & {
+    remainingFreeLookups?: number;
+    nextResetTime?: number | null;
+  } = trustReport;
   if (!isAuthenticated) {
     const clientIp = getClientIp(request);
     responseData.remainingFreeLookups = getRemainingFreeLookups(clientIp);
+    responseData.nextResetTime = getTimeUntilNextReset(clientIp);
   }
 
   return NextResponse.json(responseData);
@@ -367,15 +498,19 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   const isAuthenticated = !authError && user !== null;
 
-  // Only return free lookup count for unauthenticated users
+  // Only return free lookup count and reset time for unauthenticated users
   if (!isAuthenticated) {
     const clientIp = getClientIp(request);
     const remaining = getRemainingFreeLookups(clientIp);
+    const nextResetTime = getTimeUntilNextReset(clientIp);
 
-    return NextResponse.json({ remainingFreeLookups: remaining });
+    return NextResponse.json({
+      remainingFreeLookups: remaining,
+      nextResetTime: nextResetTime,
+    });
   }
 
   // Authenticated users don't use free lookups
-  return NextResponse.json({ remainingFreeLookups: null });
+  return NextResponse.json({ remainingFreeLookups: null, nextResetTime: null });
 }
 

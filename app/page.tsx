@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Loader2, Shield, CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TrustResults } from "@/components/TrustResults";
@@ -10,6 +10,69 @@ import { Footer } from "@/components/Footer";
 import { CookieBanner } from "@/components/CookieBanner";
 import type { TrustReport } from "@/types/trust";
 import { verifyAccount } from "@/lib/fetch-utils";
+
+/**
+ * Countdown component for free lookup reset timer.
+ * Shows "Next lookup available in X minutes" and updates every second.
+ */
+/**
+ * Countdown component for free lookup reset timer.
+ * Shows "Next lookup available in X minutes" and updates every second.
+ *
+ * nextResetTime is in milliseconds remaining (not absolute timestamp).
+ */
+const FreeLookupCountdown = ({
+  nextResetTime,
+  onReset
+}: {
+  nextResetTime: number | null;
+  onReset: () => void;
+}) => {
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (nextResetTime === null) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    // nextResetTime is milliseconds remaining, so we start with that
+    setTimeRemaining(nextResetTime);
+
+    // Update every second by decrementing
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev === null || prev <= 0) {
+          onReset(); // Trigger refresh when countdown reaches zero
+          return 0;
+        }
+        return prev - 1000; // Decrement by 1 second
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [nextResetTime, onReset]);
+
+  if (timeRemaining === null || timeRemaining <= 0) {
+    return (
+      <span className="text-gray-300 text-sm">
+        <span className="font-semibold text-blue-400">3</span> free lookups available
+      </span>
+    );
+  }
+
+  const minutes = Math.floor(timeRemaining / (60 * 1000));
+  const seconds = Math.floor((timeRemaining % (60 * 1000)) / 1000);
+
+  return (
+    <span className="text-gray-300 text-sm">
+      Next lookup available in{" "}
+      <span className="font-semibold text-blue-400">
+        {minutes}:{seconds.toString().padStart(2, "0")}
+      </span>
+    </span>
+  );
+};
 
 /**
  * Main landing page with search and verification.
@@ -23,14 +86,55 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<TrustReport | null>(null);
+  const [lastSearchedUsername, setLastSearchedUsername] = useState<string | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
+  // Track the username currently being searched (prevents concurrent duplicate searches)
+  const searchingUsernameRef = useRef<string | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [freeLookupsRemaining, setFreeLookupsRemaining] = useState<
     number | null
   >(null);
+  const [nextResetTime, setNextResetTime] = useState<number | null>(null);
 
   const supabase = createClient();
+
+  // Ref to track if we're currently fetching credits (prevents race conditions)
+  const fetchingCreditsRef = useRef(false);
+
+  // Single function to fetch credits - prevents race conditions
+  const fetchCredits = useCallback(async (userId: string) => {
+    // Prevent concurrent fetches
+    if (fetchingCreditsRef.current) {
+      return;
+    }
+
+    fetchingCreditsRef.current = true;
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("id", userId)
+        .single();
+
+      if (profile) {
+        setCredits(profile.credits);
+      } else if (profileError && profileError.code === "PGRST116") {
+        // Profile doesn't exist (404) - default to 0 credits
+        setCredits(0);
+        console.warn(
+          "Profile not found for user:",
+          userId,
+          "- trigger may not have run"
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+    } finally {
+      fetchingCreditsRef.current = false;
+    }
+  }, [supabase]);
 
   // Load user session, credits, free lookups, and restore search state on mount
   useEffect(() => {
@@ -107,27 +211,8 @@ export default function Home() {
         setFreeLookupsRemaining(null);
         localStorage.removeItem("freeLookupsRemaining");
 
-        // Fetch credits
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("credits")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (profile) {
-          setCredits(profile.credits);
-        } else if (profileError && profileError.code === "PGRST116") {
-          // Profile doesn't exist (404) - trigger should have created it
-          // This can happen if the trigger wasn't set up or user was created before trigger
-          // Default to 0 credits and let the user know they need to contact support
-          // or we could create it here, but that requires INSERT permission
-          setCredits(0);
-          console.warn(
-            "Profile not found for user:",
-            currentUser.id,
-            "- trigger may not have run"
-          );
-        }
+        // Fetch credits using centralized function
+        await fetchCredits(currentUser.id);
       } else {
         // For unauthenticated users, check remaining free lookups from server
         try {
@@ -140,6 +225,9 @@ export default function Home() {
                 "freeLookupsRemaining",
                 data.remainingFreeLookups.toString()
               );
+            }
+            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+              setNextResetTime(data.nextResetTime);
             }
           }
         } catch (error) {
@@ -159,8 +247,9 @@ export default function Home() {
       setTimeout(loadUser, 500);
       // Clean the URL param
       window.history.replaceState({}, "", window.location.pathname);
-      
+
       // If user wanted to buy credits, auto-open modal after sign-in
+      setShowSignInModal(false); // Close sign-in modal
       const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
       if (shouldOpenCredits) {
         setTimeout(() => {
@@ -181,21 +270,12 @@ export default function Home() {
         setFreeLookupsRemaining(null);
         localStorage.removeItem("freeLookupsRemaining");
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("credits")
-          .eq("id", session.user.id)
-          .single();
+        // Fetch credits using centralized function
+        await fetchCredits(session.user.id);
 
-        if (profile) {
-          setCredits(profile.credits);
-        } else if (profileError && profileError.code === "PGRST116") {
-          // Profile doesn't exist - default to 0 credits
-          setCredits(0);
-        }
-
-        // If user just signed in and they wanted to buy credits, auto-open modal
+        // If user just signed in, close sign-in modal and check if they wanted to buy credits
         if (wasUnauthenticated) {
+          setShowSignInModal(false); // Close sign-in modal
           const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
           if (shouldOpenCredits) {
             sessionStorage.removeItem("openCreditsAfterSignIn");
@@ -226,7 +306,7 @@ export default function Home() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, fetchCredits]);
 
   // Check for checkout success/cancel in URL params
   useEffect(() => {
@@ -234,27 +314,17 @@ export default function Home() {
     const checkoutStatus = params.get("checkout");
 
     if (checkoutStatus === "success") {
-      // Refresh credits after successful payment
+      // Refresh credits after successful payment using centralized function
       if (user) {
-        supabase
-          .from("profiles")
-          .select("credits")
-          .eq("id", user.id)
-          .single()
-          .then(({ data: profile, error: profileError }) => {
-            if (profile) {
-              setCredits(profile.credits);
-            } else if (profileError && profileError.code === "PGRST116") {
-              // Profile doesn't exist - default to 0 credits
-              setCredits(0);
-            }
-          });
+        fetchCredits(user.id).catch((err) => {
+          console.error("Failed to refresh credits after checkout:", err);
+        });
       }
 
       // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [user, supabase]);
+  }, [user, fetchCredits]);
 
   const handleVerify = async () => {
     if (!username.trim()) {
@@ -262,23 +332,54 @@ export default function Home() {
       return;
     }
 
+    // Strip @ sign if present
+    const cleanUsername = username.trim().replace(/^@+/, "");
+    const cleanUsernameLower = cleanUsername.toLowerCase();
+
+    // Prevent duplicate searches - multiple checks:
+    // 1. If already loading, ignore (prevents rapid clicks)
+    if (loading) {
+      return;
+    }
+
+    // 2. If same username is currently being searched, ignore (prevents concurrent duplicate requests)
+    if (searchingUsernameRef.current && cleanUsernameLower === searchingUsernameRef.current.toLowerCase()) {
+      return;
+    }
+
+    // 3. If same username as last successful search and we have results, just show cached result
+    if (lastSearchedUsername && cleanUsernameLower === lastSearchedUsername.toLowerCase() && report) {
+      // Already showing this account - no need to search again or deduct credits
+      setError(null);
+      return;
+    }
+
+    // Mark this username as being searched IMMEDIATELY (synchronously)
+    // This prevents race conditions where rapid clicks happen before setLoading executes
+    searchingUsernameRef.current = cleanUsername;
     setLoading(true);
     setError(null);
     setReport(null);
 
-    // Strip @ sign if present
-    const cleanUsername = username.trim().replace(/^@+/, "");
+    try {
+      const result = await verifyAccount(cleanUsername);
 
-    const result = await verifyAccount(cleanUsername);
+      // Clear searching ref when done (success or error)
+      searchingUsernameRef.current = null;
 
-    if (result.isErr()) {
+      if (result.isErr()) {
       const errorMessage = result.error.message;
+
+      // Clear last searched username on error so user can retry
+      setLastSearchedUsername(null);
 
       if (errorMessage === "INSUFFICIENT_CREDITS") {
         setError(
           "Insufficient credits. Please purchase more credits to continue."
         );
         setShowCreditModal(true);
+      } else if (errorMessage === "RATE_LIMIT_EXCEEDED") {
+        setError("Rate limit exceeded. Please wait a moment and try again.");
       } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
         setError("Account not found. Please check the username and try again.");
       } else if (
@@ -289,8 +390,10 @@ export default function Home() {
         // Free lookups exhausted - update count to 0
         setFreeLookupsRemaining(0);
         localStorage.setItem("freeLookupsRemaining", "0");
-        // Show credit modal to prompt sign-in and payment
-        setShowCreditModal(true);
+        // Track that user wants to buy credits - will auto-open modal after sign-in
+        sessionStorage.setItem("openCreditsAfterSignIn", "true");
+        // Open sign-in modal directly (user needs to sign in to buy credits)
+        setShowSignInModal(true);
       } else {
         setError(errorMessage || "An error occurred");
       }
@@ -298,54 +401,54 @@ export default function Home() {
       return;
     }
 
-    const trustReport = result.value;
+        const trustReport = result.value;
 
-    // Update free lookups if response includes remaining count (for unauthenticated users)
-    if (
-      "remainingFreeLookups" in trustReport &&
-      typeof (trustReport as { remainingFreeLookups?: number })
-        .remainingFreeLookups === "number"
-    ) {
-      const remaining = (trustReport as { remainingFreeLookups: number })
-        .remainingFreeLookups;
-      setFreeLookupsRemaining(remaining);
-      localStorage.setItem("freeLookupsRemaining", remaining.toString());
-    }
+      // Update free lookups if response includes remaining count (for unauthenticated users)
+      if (
+        "remainingFreeLookups" in trustReport &&
+        typeof (trustReport as { remainingFreeLookups?: number })
+          .remainingFreeLookups === "number"
+      ) {
+        const remaining = (trustReport as { remainingFreeLookups: number })
+          .remainingFreeLookups;
+        setFreeLookupsRemaining(remaining);
+        localStorage.setItem("freeLookupsRemaining", remaining.toString());
 
-    // Update UI immediately
-    setReport(trustReport);
-    setLoading(false);
-
-    // Update URL with search query
-    const url = new URL(window.location.href);
-    url.searchParams.set("q", cleanUsername);
-    window.history.pushState({}, "", url.toString());
-
-    // Store report in sessionStorage for persistence
-    sessionStorage.setItem("lastTrustReport", JSON.stringify(trustReport));
-
-    // Refresh credits asynchronously in the background (don't block UI)
-    if (user) {
-      void Promise.resolve(
-        supabase.from("profiles").select("credits").eq("id", user.id).single()
-      )
-        .then(({ data: profile, error }) => {
-          if (error) {
-            if (error.code === "PGRST116") {
-              // Profile doesn't exist - default to 0 credits
-              setCredits(0);
-            } else {
-              console.error("Failed to refresh credits:", error);
-            }
-            return;
+        // Update next reset time if provided
+        if ("nextResetTime" in trustReport) {
+          const resetTime = (trustReport as { nextResetTime?: number | null }).nextResetTime;
+          if (typeof resetTime === "number" || resetTime === null) {
+            setNextResetTime(resetTime);
           }
-          if (profile) {
-            setCredits(profile.credits);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to refresh credits:", err);
+        }
+      }
+
+      // Update UI immediately
+      setReport(trustReport);
+      setLastSearchedUsername(cleanUsername); // Remember this successful search
+      setLoading(false);
+
+      // Update URL with search query
+      const url = new URL(window.location.href);
+      url.searchParams.set("q", cleanUsername);
+      window.history.pushState({}, "", url.toString());
+
+      // Store report in sessionStorage for persistence
+      sessionStorage.setItem("lastTrustReport", JSON.stringify(trustReport));
+
+      // Refresh credits asynchronously in the background (don't block UI)
+      if (user) {
+        fetchCredits(user.id).catch((err) => {
+          console.error("Failed to refresh credits after verification:", err);
         });
+      }
+    } catch (error) {
+      // Handle unexpected errors (network failures, etc.)
+      console.error("Unexpected error during verification:", error);
+      searchingUsernameRef.current = null;
+      setLoading(false);
+      setError("An unexpected error occurred. Please try again.");
+      setLastSearchedUsername(null);
     }
   };
 
@@ -360,7 +463,10 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Auth Button */}
         <div className="flex justify-end mb-8">
-          <AuthButton />
+          <AuthButton
+            forceShowSignIn={showSignInModal}
+            onSignInModalClose={() => setShowSignInModal(false)}
+          />
         </div>
 
         {/* Header */}
@@ -403,20 +509,39 @@ export default function Home() {
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-300 text-sm">
-                <span className="font-semibold text-blue-400">
-                  {freeLookupsRemaining}
-                </span>{" "}
-                free {freeLookupsRemaining === 1 ? "lookup" : "lookups"}{" "}
-                remaining
-              </span>
+              {freeLookupsRemaining > 0 ? (
+                <span className="text-gray-300 text-sm">
+                  <span className="font-semibold text-blue-400">
+                    {freeLookupsRemaining}
+                  </span>{" "}
+                  free {freeLookupsRemaining === 1 ? "lookup" : "lookups"}{" "}
+                  remaining
+                </span>
+              ) : (
+                <FreeLookupCountdown
+                  nextResetTime={nextResetTime}
+                  onReset={() => {
+                    // Refresh free lookups when countdown reaches zero
+                    fetch("/api/verify", { method: "GET" })
+                      .then((res) => res.json())
+                      .then((data) => {
+                        if (typeof data.remainingFreeLookups === "number") {
+                          setFreeLookupsRemaining(data.remainingFreeLookups);
+                          setNextResetTime(data.nextResetTime);
+                        }
+                      })
+                      .catch(console.error);
+                  }}
+                />
+              )}
             </div>
             {freeLookupsRemaining === 0 && (
               <button
                 onClick={() => {
-                  setShowCreditModal(true);
                   // Track that user wants to buy credits - will auto-open modal after sign-in
                   sessionStorage.setItem("openCreditsAfterSignIn", "true");
+                  // Open sign-in modal directly (user wants to buy, so they need to sign in)
+                  setShowSignInModal(true);
                 }}
                 className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 Buy More Lookups

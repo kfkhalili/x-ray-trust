@@ -12,13 +12,32 @@ import { LogIn, LogOut, User } from 'lucide-react';
  *
  * Why OAuth? Faster sign-in, no email required. Users trust Google/GitHub for auth.
  */
-export const AuthButton = () => {
+interface AuthButtonProps {
+  /**
+   * If true, forces the sign-in modal to be shown.
+   * Useful when user clicks "Buy More Lookups" - they want to sign in immediately.
+   */
+  forceShowSignIn?: boolean;
+  /**
+   * Callback when sign-in modal should be closed.
+   */
+  onSignInModalClose?: () => void;
+}
+
+export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: AuthButtonProps = {}) => {
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
+
+  // Sync forceShowSignIn prop to internal state
+  useEffect(() => {
+    if (forceShowSignIn) {
+      setShowSignIn(true);
+    }
+  }, [forceShowSignIn]);
 
   const supabase = createClient();
 
@@ -153,10 +172,10 @@ export const AuthButton = () => {
     setOauthLoading(provider);
     setMessage(null);
 
-    // Use NEXT_PUBLIC_APP_URL if set (for production), otherwise use current origin (for local dev)
-    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
-      : `${window.location.origin}/auth/callback`;
+    // Always use current origin for redirect URL in client-side code
+    // This ensures localhost stays on localhost and production stays on production
+    // NEXT_PUBLIC_APP_URL is for server-side use only (API routes, etc.)
+    const redirectUrl = `${window.location.origin}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -191,7 +210,10 @@ export const AuthButton = () => {
     );
   }
 
-  if (showSignIn) {
+  // Show sign-in modal if forced or if user clicked sign-in button
+  const shouldShowSignIn = forceShowSignIn || showSignIn;
+
+  if (shouldShowSignIn) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-md w-full p-6 space-y-4">
@@ -201,6 +223,7 @@ export const AuthButton = () => {
               onClick={() => {
                 setShowSignIn(false);
                 setMessage(null);
+                onSignInModalClose?.();
               }}
               className="text-gray-400 hover:text-gray-200 transition-colors"
             >
