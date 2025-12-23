@@ -31,12 +31,6 @@ export const AuthButton = () => {
         supabase.auth.getSession(),
       ]);
 
-      console.log('Checking user:', {
-        user: userResult.data.user?.email || 'no user',
-        session: sessionResult.data.session ? 'has session' : 'no session',
-        error: userResult.error?.message || sessionResult.error?.message || 'none',
-      });
-
       let currentUser = userResult.data.user || sessionResult.data.session?.user || null;
 
       // If browser client can't find session, try server-side check as fallback
@@ -50,14 +44,12 @@ export const AuthButton = () => {
           if (serverResponse.ok) {
             const serverData = await serverResponse.json();
             if (serverData.user && serverData.session) {
-              console.log('Found user via server-side check:', serverData.user.email);
               // Server has session but browser client can't read cookies
               // Trigger a refresh by calling getUser again after a short delay
               // This gives cookies time to be properly set/read
               setTimeout(async () => {
                 const { data: { user: refreshedUser } } = await supabase.auth.getUser();
                 if (refreshedUser) {
-                  console.log('Browser client found user after delay:', refreshedUser.email);
                   setUser(refreshedUser);
                 }
               }, 100);
@@ -71,10 +63,8 @@ export const AuthButton = () => {
       }
 
       if (currentUser) {
-        console.log('Setting user:', currentUser.email);
         setUser(currentUser);
       } else {
-        console.log('No user found');
         setUser(null);
       }
     };
@@ -84,7 +74,6 @@ export const AuthButton = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email || 'no user');
         setUser(session?.user ?? null);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setShowSignIn(false);
