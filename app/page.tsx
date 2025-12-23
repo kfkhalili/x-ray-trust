@@ -103,6 +103,9 @@ export default function Home() {
 
       if (currentUser) {
         setUser(currentUser);
+        // Clear free lookups when user is authenticated (they use credits now)
+        setFreeLookupsRemaining(null);
+        localStorage.removeItem("freeLookupsRemaining");
 
         // Fetch credits
         const { data: profile, error: profileError } = await supabase
@@ -164,6 +167,9 @@ export default function Home() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        // Clear free lookups when user authenticates (they use credits now)
+        setFreeLookupsRemaining(null);
+        localStorage.removeItem("freeLookupsRemaining");
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -180,6 +186,18 @@ export default function Home() {
       } else {
         setUser(null);
         setCredits(null);
+        // When user signs out, fetch free lookups for unauthenticated state
+        const response = await fetch("/api/verify", { method: "GET" });
+        if (response.ok) {
+          const data = await response.json();
+          if (typeof data.remainingFreeLookups === "number") {
+            setFreeLookupsRemaining(data.remainingFreeLookups);
+            localStorage.setItem(
+              "freeLookupsRemaining",
+              data.remainingFreeLookups.toString()
+            );
+          }
+        }
       }
     });
 
@@ -338,24 +356,28 @@ export default function Home() {
         </div>
 
         {/* Credits/Free Lookups Display */}
-        {user && credits !== null ? (
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-emerald-400" />
-              <span className="text-gray-300 text-sm">
-                <span className="font-semibold text-emerald-400">
-                  {credits}
-                </span>{" "}
-                credits
-              </span>
+        {user ? (
+          // Authenticated users: always show credits (even if 0 or null)
+          credits !== null ? (
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <span className="text-gray-300 text-sm">
+                  <span className="font-semibold text-emerald-400">
+                    {credits}
+                  </span>{" "}
+                  credits
+                </span>
+              </div>
+              <button
+                onClick={() => setShowCreditModal(true)}
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Buy Credits
+              </button>
             </div>
-            <button
-              onClick={() => setShowCreditModal(true)}
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              Buy Credits
-            </button>
-          </div>
+          ) : null // Show nothing while credits are loading
         ) : freeLookupsRemaining !== null ? (
+          // Unauthenticated users: show free lookups
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-400" />
