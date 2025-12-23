@@ -5,6 +5,7 @@ Quick reference for deploying X-Ray Trust to Vercel.
 ## Pre-Deployment Checklist
 
 ### 1. Supabase Setup ✅
+
 - [ ] Create Supabase project (or use existing)
 - [ ] Run `supabase/schema.sql` in SQL Editor
 - [ ] Copy credentials:
@@ -13,6 +14,7 @@ Quick reference for deploying X-Ray Trust to Vercel.
   - `SUPABASE_SERVICE_ROLE_KEY`
 
 ### 2. Stripe Setup (Test Mode First)
+
 - [ ] Create 3 products in Stripe Dashboard (Test Mode):
   - 50 Credits - €4.99
   - 100 Credits - €9.99
@@ -23,22 +25,26 @@ Quick reference for deploying X-Ray Trust to Vercel.
 - [ ] Copy `STRIPE_SECRET_KEY` (test key: `sk_test_...`)
 
 ### 3. Twitter API
+
 - [ ] Get API key from https://twitterapi.io
 - [ ] Copy `TWITTER_API_KEY`
 
 ### 4. GitHub
+
 - [ ] Push all commits to GitHub
 - [ ] Verify repository is up to date
 
 ## Vercel Deployment Steps
 
 ### Step 1: Connect Repository
+
 1. Go to https://vercel.com
 2. Click "Add New Project"
 3. Import `kfkhalili/x-ray-trust` from GitHub
 4. Vercel auto-detects Next.js ✅
 
 ### Step 2: Environment Variables
+
 Add these in Vercel project settings → Environment Variables:
 
 ```
@@ -53,11 +59,13 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 **Note:** Don't add `STRIPE_WEBHOOK_SECRET` yet—you need the Vercel URL first.
 
 ### Step 3: Deploy
+
 1. Click "Deploy"
 2. Wait for build (~2-3 minutes)
 3. Copy your Vercel URL (e.g., `x-ray-trust.vercel.app`)
 
 ### Step 4: Configure Stripe Webhook
+
 1. Go to Stripe Dashboard → Webhooks
 2. Click "Add endpoint"
 3. Enter: `https://your-app.vercel.app/api/webhook`
@@ -67,12 +75,14 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 7. Redeploy (or wait for auto-redeploy)
 
 ### Step 5: Update App URL
+
 1. Update `NEXT_PUBLIC_APP_URL` in Vercel with your actual URL
 2. Redeploy
 
 ## Testing After Deployment
 
 ### Test Checklist
+
 - [ ] Visit Vercel URL - page loads
 - [ ] Try 3 free lookups (unauthenticated)
 - [ ] Sign in with email magic link
@@ -86,21 +96,25 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 ## Common Issues
 
 ### Build Fails
+
 - Check environment variables are set
 - Verify TypeScript compiles locally: `npm run build`
 - Check Vercel build logs
 
 ### Webhook Not Working
+
 - Verify webhook URL is correct
 - Check `STRIPE_WEBHOOK_SECRET` matches Stripe
 - Test with Stripe CLI locally first
 
 ### Authentication Not Working
+
 - Verify Supabase URL and keys are correct
 - Check Supabase project is active
 - Verify email is configured in Supabase
 
 ### Payments Not Working
+
 - Verify Price IDs in `lib/stripe.ts` match Stripe
 - Check Stripe keys are for correct environment (test vs live)
 - Verify webhook is receiving events
@@ -118,6 +132,7 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 ## Quick Reference
 
 **Environment Variables Needed:**
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -127,12 +142,13 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
 - `NEXT_PUBLIC_APP_URL` (update after first deploy)
 
 **Stripe Test Card:**
+
 - Card: `4242 4242 4242 4242`
 - Any future expiry date
 - Any CVC
 
 **Support Docs:**
+
 - Full deployment: `docs/DEPLOYMENT.md`
 - Stripe setup: `docs/STRIPE_SETUP_GUIDE.md`
 - German launch: `docs/GERMAN_LAUNCH_GUIDE.md`
-

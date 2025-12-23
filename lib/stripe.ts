@@ -5,10 +5,29 @@ import Stripe from 'stripe';
  *
  * API version pinned to prevent breaking changes. Stripe updates API versions
  * regularly; pinning ensures our code doesn't break when Stripe releases new versions.
+ *
+ * Why lazy initialization? During build time, environment variables might not be
+ * available. We create the client only when needed (lazy initialization) to prevent
+ * build-time errors in Vercel.
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-});
+let stripeInstance: Stripe | null = null;
+
+export const stripe = (): Stripe => {
+  if (stripeInstance) {
+    return stripeInstance;
+  }
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY must be set');
+  }
+
+  stripeInstance = new Stripe(secretKey, {
+    apiVersion: '2025-12-15.clover',
+  });
+
+  return stripeInstance;
+};
 
 /**
  * Credit pack pricing configuration.

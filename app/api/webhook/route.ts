@@ -33,7 +33,7 @@ const verifyWebhookSignature = async (
   }
 
   try {
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    const event = stripe().webhooks.constructEvent(body, signature, webhookSecret);
     return ok(event);
   } catch (error) {
     return err(error instanceof Error ? error : new Error('Invalid webhook signature'));
