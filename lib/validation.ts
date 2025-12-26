@@ -45,7 +45,7 @@ const isErrorResponse = (data: unknown): data is { error: string; code: string; 
     'code' in data &&
     typeof (data as { error: unknown }).error === 'string' &&
     typeof (data as { code: unknown }).code === 'string' &&
-    (!('nextResetTime' in data) || 
+    (!('nextResetTime' in data) ||
      typeof (data as { nextResetTime: unknown }).nextResetTime === 'number' ||
      (data as { nextResetTime: unknown }).nextResetTime === null)
   );

@@ -86,10 +86,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<TrustReport | null>(null);
-  const [lastSearchedUsername, setLastSearchedUsername] = useState<string | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  // Track the username currently being searched (prevents concurrent duplicate searches)
-  const searchingUsernameRef = useRef<string | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -97,6 +94,8 @@ export default function Home() {
     number | null
   >(null);
   const [nextResetTime, setNextResetTime] = useState<number | null>(null);
+  // Track current subscription to cleanup on unmount or username change
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const supabase = createClient();
 
@@ -331,6 +330,11 @@ export default function Home() {
 
     return () => {
       subscription.unsubscribe();
+      // Cleanup Realtime subscription on unmount
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
     };
   }, [supabase, fetchCredits]);
 
@@ -352,52 +356,70 @@ export default function Home() {
     }
   }, [user, fetchCredits]);
 
+  /**
+   * Sets up Realtime subscription to listen for verification updates.
+   *
+   * Why Realtime? When multiple users request the same username simultaneously,
+   * only one API call is made. Other clients subscribe to get the result when it's ready.
+   */
+  const setupRealtimeSubscription = (normalizedUsername: string) => {
+    // Cleanup existing subscription
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
+    // Subscribe to updates for this specific username
+    const channel = supabase
+      .channel(`verification:${normalizedUsername}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "verifications",
+          filter: `username=eq.${normalizedUsername}`,
+        },
+        (payload) => {
+          // When verification is updated (status changes from 'pending' to 'completed')
+          if (payload.new.status === "completed" && payload.new.trust_report) {
+            const updatedReport = payload.new.trust_report as TrustReport;
+            setReport(updatedReport);
+            setLoading(false);
+
+            // Update sessionStorage
+            sessionStorage.setItem("lastTrustReport", JSON.stringify(updatedReport));
+          }
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
+  };
+
   const handleVerify = async () => {
     if (!username.trim()) {
       setError("Please enter a username");
       return;
     }
 
-    // Strip @ sign if present
+    // Strip @ sign if present and normalize
     const cleanUsername = username.trim().replace(/^@+/, "");
-    const cleanUsernameLower = cleanUsername.toLowerCase();
+    const normalizedUsername = cleanUsername.toLowerCase();
 
-    // Prevent duplicate searches - multiple checks:
-    // 1. If already loading, ignore (prevents rapid clicks)
-    if (loading) {
-      return;
-    }
-
-    // 2. If same username is currently being searched, ignore (prevents concurrent duplicate requests)
-    if (searchingUsernameRef.current && cleanUsernameLower === searchingUsernameRef.current.toLowerCase()) {
-      return;
-    }
-
-    // 3. If same username as last successful search and we have results, just show cached result
-    if (lastSearchedUsername && cleanUsernameLower === lastSearchedUsername.toLowerCase() && report) {
-      // Already showing this account - no need to search again or deduct credits
-      setError(null);
-      return;
-    }
-
-    // Mark this username as being searched IMMEDIATELY (synchronously)
-    // This prevents race conditions where rapid clicks happen before setLoading executes
-    searchingUsernameRef.current = cleanUsername;
+    // No dampening - user can click as often as they want
+    // API will handle caching and return immediately if data is fresh
     setLoading(true);
     setError(null);
-    setReport(null);
+
+    // Set up Realtime subscription to listen for updates
+    // This handles the case where another request is already fetching this username
+    setupRealtimeSubscription(normalizedUsername);
 
     try {
       const result = await verifyAccount(cleanUsername);
 
-      // Clear searching ref when done (success or error)
-      searchingUsernameRef.current = null;
-
       if (result.isErr()) {
-      const errorMessage = result.error.message;
-
-      // Clear last searched username on error so user can retry
-      setLastSearchedUsername(null);
+        const errorMessage = result.error.message;
 
         if (errorMessage === "INSUFFICIENT_CREDITS") {
           // Check if error includes nextResetTime for countdown
@@ -409,32 +431,37 @@ export default function Home() {
             "Insufficient credits and free lookups exhausted. Please purchase more credits or wait for free lookups to reset."
           );
           setShowCreditModal(true);
-      } else if (errorMessage === "RATE_LIMIT_EXCEEDED") {
-        setError("Rate limit exceeded. Please wait a moment and try again.");
-      } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
-        setError("Account not found. Please check the username and try again.");
-      } else if (
-        errorMessage === "AUTH_REQUIRED" ||
-        errorMessage === "UNAUTHORIZED"
-      ) {
-        setError("Free lookups exhausted. Please sign in to continue.");
-        // Free lookups exhausted - update count to 0
-        setFreeLookupsRemaining(0);
-        localStorage.setItem("freeLookupsRemaining", "0");
-        // Track that user wants to buy credits - will auto-open modal after sign-in
-        sessionStorage.setItem("openCreditsAfterSignIn", "true");
-        // Open sign-in modal directly (user needs to sign in to buy credits)
-        setShowSignInModal(true);
-      } else {
-        setError(errorMessage || "An error occurred");
+        } else if (errorMessage === "RATE_LIMIT_EXCEEDED") {
+          setError("Rate limit exceeded. Please wait a moment and try again.");
+        } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
+          setError("Account not found. Please check the username and try again.");
+        } else if (
+          errorMessage === "AUTH_REQUIRED" ||
+          errorMessage === "UNAUTHORIZED"
+        ) {
+          setError("Free lookups exhausted. Please sign in to continue.");
+          // Free lookups exhausted - update count to 0
+          setFreeLookupsRemaining(0);
+          localStorage.setItem("freeLookupsRemaining", "0");
+          // Track that user wants to buy credits - will auto-open modal after sign-in
+          sessionStorage.setItem("openCreditsAfterSignIn", "true");
+          // Open sign-in modal directly (user needs to sign in to buy credits)
+          setShowSignInModal(true);
+        } else if (errorMessage === "PENDING") {
+          // Verification is in progress - Realtime will update when ready
+          setError(null); // No error, just waiting
+          // Keep loading state - Realtime subscription will update when ready
+          return;
+        } else {
+          setError(errorMessage || "An error occurred");
+        }
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-        const trustReport = result.value;
+      const trustReport = result.value;
 
-      // Update free lookups if response includes remaining count (for unauthenticated users)
+      // Update free lookups if response includes remaining count
       if (
         "remainingFreeLookups" in trustReport &&
         typeof (trustReport as { remainingFreeLookups?: number })
@@ -454,9 +481,8 @@ export default function Home() {
         }
       }
 
-      // Update UI immediately
+      // Update UI immediately (could be cached or fresh data)
       setReport(trustReport);
-      setLastSearchedUsername(cleanUsername); // Remember this successful search
       setLoading(false);
 
       // Update URL with search query
@@ -476,10 +502,8 @@ export default function Home() {
     } catch (error) {
       // Handle unexpected errors (network failures, etc.)
       console.error("Unexpected error during verification:", error);
-      searchingUsernameRef.current = null;
       setLoading(false);
       setError("An unexpected error occurred. Please try again.");
-      setLastSearchedUsername(null);
     }
   };
 
@@ -535,7 +559,7 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              
+
               {/* Free Lookups Display (authenticated users also get free lookups) */}
               {freeLookupsRemaining !== null && (
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
@@ -548,7 +572,7 @@ export default function Home() {
                       free {freeLookupsRemaining === 1 ? "lookup" : "lookups"}
                     </span>
                   ) : (
-                    <FreeLookupCountdown 
+                    <FreeLookupCountdown
                       nextResetTime={nextResetTime}
                       onReset={() => {
                         // Refresh free lookups when countdown reaches zero
@@ -566,7 +590,7 @@ export default function Home() {
                   )}
                 </div>
               )}
-              
+
               {/* Buy Credits Button */}
               <button
                 onClick={() => setShowCreditModal(true)}
