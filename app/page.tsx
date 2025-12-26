@@ -23,7 +23,7 @@ import { verifyAccount } from "@/lib/fetch-utils";
  */
 const FreeLookupCountdown = ({
   nextResetTime,
-  onReset
+  onReset,
 }: {
   nextResetTime: number | null;
   onReset: () => void;
@@ -56,7 +56,8 @@ const FreeLookupCountdown = ({
   if (timeRemaining === null || timeRemaining <= 0) {
     return (
       <span className="text-gray-300 text-sm">
-        <span className="font-semibold text-blue-400">3</span> free lookups available
+        <span className="font-semibold text-blue-400">3</span> free lookups
+        available
       </span>
     );
   }
@@ -95,7 +96,9 @@ export default function Home() {
   >(null);
   const [nextResetTime, setNextResetTime] = useState<number | null>(null);
   // Track current subscription to cleanup on unmount or username change
-  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null
+  );
 
   const supabase = createClient();
 
@@ -103,37 +106,40 @@ export default function Home() {
   const fetchingCreditsRef = useRef(false);
 
   // Single function to fetch credits - prevents race conditions
-  const fetchCredits = useCallback(async (userId: string) => {
-    // Prevent concurrent fetches
-    if (fetchingCreditsRef.current) {
-      return;
-    }
-
-    fetchingCreditsRef.current = true;
-    try {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("id", userId)
-        .single();
-
-      if (profile) {
-        setCredits(profile.credits);
-      } else if (profileError && profileError.code === "PGRST116") {
-        // Profile doesn't exist (404) - default to 0 credits
-        setCredits(0);
-        console.warn(
-          "Profile not found for user:",
-          userId,
-          "- trigger may not have run"
-        );
+  const fetchCredits = useCallback(
+    async (userId: string) => {
+      // Prevent concurrent fetches
+      if (fetchingCreditsRef.current) {
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching credits:", error);
-    } finally {
-      fetchingCreditsRef.current = false;
-    }
-  }, [supabase]);
+
+      fetchingCreditsRef.current = true;
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", userId)
+          .single();
+
+        if (profile) {
+          setCredits(profile.credits);
+        } else if (profileError && profileError.code === "PGRST116") {
+          // Profile doesn't exist (404) - default to 0 credits
+          setCredits(0);
+          console.warn(
+            "Profile not found for user:",
+            userId,
+            "- trigger may not have run"
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching credits:", error);
+      } finally {
+        fetchingCreditsRef.current = false;
+      }
+    },
+    [supabase]
+  );
 
   // Load user session, credits, free lookups, and restore search state on mount
   useEffect(() => {
@@ -215,7 +221,10 @@ export default function Home() {
             if (typeof data.remainingFreeLookups === "number") {
               setFreeLookupsRemaining(data.remainingFreeLookups);
             }
-            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+            if (
+              typeof data.nextResetTime === "number" ||
+              data.nextResetTime === null
+            ) {
               setNextResetTime(data.nextResetTime);
             }
           }
@@ -238,7 +247,10 @@ export default function Home() {
                 data.remainingFreeLookups.toString()
               );
             }
-            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+            if (
+              typeof data.nextResetTime === "number" ||
+              data.nextResetTime === null
+            ) {
               setNextResetTime(data.nextResetTime);
             }
           }
@@ -262,7 +274,8 @@ export default function Home() {
 
       // If user wanted to buy credits, auto-open modal after sign-in
       setShowSignInModal(false); // Close sign-in modal
-      const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
+      const shouldOpenCredits =
+        sessionStorage.getItem("openCreditsAfterSignIn") === "true";
       if (shouldOpenCredits) {
         setTimeout(() => {
           sessionStorage.removeItem("openCreditsAfterSignIn");
@@ -287,7 +300,10 @@ export default function Home() {
             if (typeof data.remainingFreeLookups === "number") {
               setFreeLookupsRemaining(data.remainingFreeLookups);
             }
-            if (typeof data.nextResetTime === "number" || data.nextResetTime === null) {
+            if (
+              typeof data.nextResetTime === "number" ||
+              data.nextResetTime === null
+            ) {
               setNextResetTime(data.nextResetTime);
             }
           }
@@ -301,7 +317,8 @@ export default function Home() {
         // If user just signed in, close sign-in modal and check if they wanted to buy credits
         if (wasUnauthenticated) {
           setShowSignInModal(false); // Close sign-in modal
-          const shouldOpenCredits = sessionStorage.getItem("openCreditsAfterSignIn") === "true";
+          const shouldOpenCredits =
+            sessionStorage.getItem("openCreditsAfterSignIn") === "true";
           if (shouldOpenCredits) {
             sessionStorage.removeItem("openCreditsAfterSignIn");
             // Small delay to ensure credits are loaded
@@ -387,7 +404,10 @@ export default function Home() {
             setLoading(false);
 
             // Update sessionStorage
-            sessionStorage.setItem("lastTrustReport", JSON.stringify(updatedReport));
+            sessionStorage.setItem(
+              "lastTrustReport",
+              JSON.stringify(updatedReport)
+            );
           }
         }
       )
@@ -423,7 +443,9 @@ export default function Home() {
 
         if (errorMessage === "INSUFFICIENT_CREDITS") {
           // Check if error includes nextResetTime for countdown
-          const errorWithResetTime = result.error as Error & { nextResetTime?: number | null };
+          const errorWithResetTime = result.error as Error & {
+            nextResetTime?: number | null;
+          };
           if (errorWithResetTime.nextResetTime !== undefined) {
             setNextResetTime(errorWithResetTime.nextResetTime);
           }
@@ -434,7 +456,9 @@ export default function Home() {
         } else if (errorMessage === "RATE_LIMIT_EXCEEDED") {
           setError("Rate limit exceeded. Please wait a moment and try again.");
         } else if (errorMessage === "ACCOUNT_NOT_FOUND") {
-          setError("Account not found. Please check the username and try again.");
+          setError(
+            "Account not found. Please check the username and try again."
+          );
         } else if (
           errorMessage === "AUTH_REQUIRED" ||
           errorMessage === "UNAUTHORIZED"
@@ -474,7 +498,8 @@ export default function Home() {
 
         // Update next reset time if provided
         if ("nextResetTime" in trustReport) {
-          const resetTime = (trustReport as { nextResetTime?: number | null }).nextResetTime;
+          const resetTime = (trustReport as { nextResetTime?: number | null })
+            .nextResetTime;
           if (typeof resetTime === "number" || resetTime === null) {
             setNextResetTime(resetTime);
           }
@@ -514,7 +539,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+    <div className="min-h-screen bg-linear-to-br from-gray-950 via-gray-900 to-gray-950">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Auth Button */}
         <div className="flex justify-end mb-8">
@@ -555,7 +580,8 @@ export default function Home() {
                   </span>
                 ) : (
                   <span className="text-gray-300 text-sm">
-                    <span className="font-semibold text-emerald-400">0</span> credits
+                    <span className="font-semibold text-emerald-400">0</span>{" "}
+                    credits
                   </span>
                 )}
               </div>
@@ -580,7 +606,9 @@ export default function Home() {
                           .then((res) => res.json())
                           .then((data) => {
                             if (typeof data.remainingFreeLookups === "number") {
-                              setFreeLookupsRemaining(data.remainingFreeLookups);
+                              setFreeLookupsRemaining(
+                                data.remainingFreeLookups
+                              );
                               setNextResetTime(data.nextResetTime);
                             }
                           })
