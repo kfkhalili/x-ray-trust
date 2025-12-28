@@ -29,9 +29,26 @@ const createCheckoutSession = async (
   priceId: string,
   userId: string,
   credits: number,
-  userEmail: string | undefined
+  userEmail: string | undefined,
+  request: NextRequest
 ): Promise<Result<Stripe.Checkout.Session, Error>> => {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  // Use NEXT_PUBLIC_APP_URL only if it's a production URL (not localhost)
+  // In development, use request origin to support any port/hostname
+  const requestUrl = new URL(request.url);
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const isProductionUrl =
+    envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1");
+  const isRequestLocalhost =
+    requestUrl.hostname === "localhost" ||
+    requestUrl.hostname === "127.0.0.1" ||
+    requestUrl.hostname.startsWith("192.168.") ||
+    requestUrl.hostname.startsWith("10.");
+
+  const baseUrl = isRequestLocalhost
+    ? requestUrl.origin
+    : isProductionUrl
+    ? envUrl
+    : requestUrl.origin;
 
   try {
     // Statement descriptor appears on customer's credit card statement
@@ -121,7 +138,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Create Stripe Checkout session - using Result type
-  const sessionResult = await createCheckoutSession(priceId, user.id, validatedBody.credits, user.email || undefined);
+  const sessionResult = await createCheckoutSession(priceId, user.id, validatedBody.credits, user.email || undefined, request);
 
   if (sessionResult.isErr()) {
     console.error('Checkout error:', sessionResult.error.message);

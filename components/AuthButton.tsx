@@ -198,9 +198,13 @@ export const AuthButton = ({
     setOauthLoading(provider);
     setMessage(null);
 
-    // Use NEXT_PUBLIC_APP_URL in production, fall back to window.location.origin for localhost
+    // Use NEXT_PUBLIC_APP_URL only if it's a production URL (not localhost)
+    // In development, always use window.location.origin to support any port/hostname
     // This ensures correct redirects in both environments
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const isProductionUrl =
+      envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1");
+    const baseUrl = isProductionUrl ? envUrl : window.location.origin;
     const redirectUrl = `${baseUrl}/auth/callback`;
 
     // Store the original origin so we can redirect back if Supabase sends us to the wrong domain
@@ -215,7 +219,7 @@ export const AuthButton = ({
       provider,
       redirectUrl,
       baseUrl,
-      isProduction: !!process.env.NEXT_PUBLIC_APP_URL,
+      isProduction: isProductionUrl,
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
       storedOrigin: window.location.origin,
     });
