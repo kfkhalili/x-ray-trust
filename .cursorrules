@@ -184,6 +184,209 @@
 - Comments explain why, not what
 - Compose functions, avoid imperative nesting
 
+## Architectural Review Learnings
+
+### Client Creation Functions Must Return Result Types
+
+**Critical Rule:** All client creation functions MUST return `Result<T, Error>`, never throw exceptions.
+
+**Why?** Throwing exceptions violates functional programming principles. Errors should be part of the type system, not control flow.
+
+**Pattern:**
+
+```typescript
+// ✅ CORRECT: Returns Result
+export const createClient = async (): Promise<Result<SupabaseClient, Error>> => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) {
+    return err(new Error('NEXT_PUBLIC_SUPABASE_URL must be set'));
+  }
+  const client = createServerClient(/* ... */);
+  return ok(client);
+};
+
+// ❌ WRONG: Throws exception
+export const createClient = async () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL must be set'); // NEVER DO THIS
+  }
+  return createServerClient(/* ... */);
+};
+```
+
+**Usage in API Routes:**
+
+```typescript
+const clientResult = await createClient();
+if (clientResult.isErr()) {
+  return NextResponse.json(
+    { error: 'Server configuration error', code: 'SERVER_ERROR' },
+    { status: 500 }
+  );
+}
+const supabase = clientResult.value;
+// Type system guarantees supabase is valid here
+```
+
+**Usage in Components:**
+
+```typescript
+const clientResult = createClient();
+if (clientResult.isErr()) {
+  console.error('Failed to create Supabase client:', clientResult.error);
+  // In development, this should never happen - fail fast
+  throw clientResult.error;
+}
+const supabase = clientResult.value;
+```
+
+**Files to Apply This Pattern:**
+- `lib/supabase/server.ts` ✅ (already fixed)
+- `lib/supabase/client.ts` ✅ (already fixed)
+- `lib/stripe.ts` ✅ (already fixed)
+- Any new client creation functions
+
+### Type Guards, Not Type Assertions
+
+**Critical Rule:** Never use type assertions `(data as Type)`. Always use type guards `(data: unknown): data is Type`.
+
+**Why?** Type assertions bypass type checking. Type guards provide runtime validation AND type narrowing.
+
+**Pattern:**
+
+```typescript
+// ✅ CORRECT: Type guard with runtime validation
+export const isUsernameRequest = (data: unknown): data is { username: string } => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'username' in data &&
+    typeof (data as { username: unknown }).username === 'string'
+  );
+};
+
+if (!isUsernameRequest(body)) {
+  return error;
+}
+// Type system now knows body.username is string
+const username = body.username; // ✅ Type-safe
+
+// ❌ WRONG: Type assertion (no runtime validation)
+if (typeof body === 'object' && body !== null && 'username' in body) {
+  const username = (body as { username: string }).username; // ❌ Unsafe
+}
+```
+
+**Where to Use:**
+- API route request body validation
+- JSON parsing and validation
+- Any place where you need to narrow `unknown` types
+
+**Files with Type Guards:**
+- `lib/validation.ts` - Contains `isUsernameRequest()`, `isCreditsRequest()`, etc.
+- Use these in API routes instead of inline assertions
+
+### Zero `any` Types Policy
+
+**Critical Rule:** Never use `any` type. Always use proper types or `unknown` with type guards.
+
+**Why?** `any` disables TypeScript's type checking, defeating the purpose of using TypeScript.
+
+**Pattern:**
+
+```typescript
+// ✅ CORRECT: Proper type
+import type { User } from '@supabase/supabase-js';
+const [user, setUser] = useState<User | null>(null);
+
+// ❌ WRONG: any type
+const [user, setUser] = useState<any>(null);
+```
+
+**Common Fixes:**
+- Supabase `User` type: `import type { User } from '@supabase/supabase-js'`
+- Component props: Use proper interface types
+- API responses: Use type guards to validate and narrow types
+
+### Result Type Composition
+
+**Pattern:** When working with multiple Result types, compose them functionally.
+
+```typescript
+// ✅ CORRECT: Compose Results functionally
+const clientResult = await createClient();
+if (clientResult.isErr()) {
+  return err(clientResult.error);
+}
+
+const dataResult = await fetchData(clientResult.value);
+if (dataResult.isErr()) {
+  return err(dataResult.error);
+}
+
+return ok(dataResult.value);
+
+// Better: Use Result.andThen() for composition
+const result = await pipe(
+  createClient(),
+  Result.andThen((client) => fetchData(client)),
+  Result.map((data) => processData(data))
+);
+```
+
+### Helper Functions Must Handle Results
+
+**Pattern:** When creating helper functions that use clients, handle Result types internally.
+
+```typescript
+// ✅ CORRECT: Helper handles Result internally
+const deductCredit = async (userId: string): Promise<Result<void, Error>> => {
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return err(supabaseResult.error);
+  }
+  const supabase = supabaseResult.value;
+  // ... use supabase
+};
+
+// ❌ WRONG: Helper throws or expects caller to handle client creation
+const deductCredit = async (userId: string, supabase: SupabaseClient) => {
+  // This forces callers to handle client creation
+};
+```
+
+### Type Safety in React Components
+
+**Pattern:** When passing props between components, ensure type compatibility.
+
+```typescript
+// Component expects: user?: User (User | undefined)
+interface CreditModalProps {
+  user?: User;
+}
+
+// State is: User | null
+const [user, setUser] = useState<User | null>(null);
+
+// ✅ CORRECT: Convert null to undefined
+<CreditModal user={user ?? undefined} />
+
+// ❌ WRONG: Direct assignment (type mismatch)
+<CreditModal user={user} /> // Error: User | null is not assignable to User | undefined
+```
+
+### Key Takeaways from Architectural Review
+
+1. **Client creation is a boundary** - Always return Result types, never throw
+2. **Type guards are mandatory** - No type assertions allowed
+3. **Zero tolerance for `any`** - Always use proper types
+4. **Compose Results functionally** - Use `andThen()`, `map()`, etc.
+5. **Handle Results at boundaries** - API routes, component initialization
+6. **Test error paths** - Result types make error handling testable
+
+**Reference:** See `docs/ARCHITECTURAL_REVIEW.md` for complete review and implementation details.
+
 ## Git Workflow
 
 - Never commit `.env.local` (contains secrets)
