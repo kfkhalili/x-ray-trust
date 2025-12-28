@@ -2,7 +2,7 @@
 
 ## Error: `{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`
 
-This error means the OAuth provider (Google or GitHub) is **not enabled** in your Supabase Dashboard, OR the configuration is incomplete.
+This error means the OAuth provider (Google, GitHub, or Twitter/X) is **not enabled** in your Supabase Dashboard, OR the configuration is incomplete.
 
 ## Quick Checklist
 
@@ -60,6 +60,80 @@ If you're using **Local Supabase** (`npx supabase start`):
    - **Client Secret (for OAuth)**: Your GitHub OAuth Client Secret
 8. **Click "Save"**
 
+### For Twitter/X.com OAuth (Production Supabase)
+
+**⚠️ CRITICAL**: There are TWO Twitter providers in Supabase. You MUST use the correct one:
+
+- ✅ **"X / Twitter (OAuth 2.0)"** - Use this one (the new OAuth 2.0 version)
+- ❌ **"Twitter (Deprecated)"** - Do NOT use this (old OAuth 1.0a, being deprecated)
+
+**The provider name in code is `'x'`** (not `'twitter'`). See [Supabase docs](https://supabase.com/docs/guides/auth/social-login/auth-twitter).
+
+1. **Go to Supabase Dashboard**: https://app.supabase.com/
+2. **Select your project** (make sure it's the right one!)
+3. **Navigate to**: Authentication → **Providers**
+4. **Find "X / Twitter (OAuth 2.0)"** in the list (NOT "Twitter (Deprecated)")
+5. **Click to expand** the "X / Twitter (OAuth 2.0)" provider section
+6. **Verify the toggle "Enable Twitter provider"** is ON (green/enabled)
+7. **Check that both fields are filled**:
+   - **Client ID (for OAuth)**: Should be your X.com **API Key** (from X Developer Portal)
+   - **Client Secret (for OAuth)**: Should be your X.com **API Key Secret** (from X Developer Portal)
+8. **If fields are empty or incorrect**:
+   - Go to [X Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+   - Navigate to your app → **Keys and tokens** tab
+   - Copy the **API Key** (this is your Client ID)
+   - Copy the **API Key Secret** (this is your Client Secret)
+   - Paste them into Supabase fields
+9. **Click "Save"** button (very important - changes don't apply until you save!)
+10. **Wait 10-30 seconds** for changes to propagate
+11. **Try logging in again**
+
+**Common mistakes for Twitter/X:**
+
+- ❌ Enabled the toggle but didn't click "Save"
+- ❌ Used the wrong credentials (API Key vs API Key Secret)
+- ❌ Copied credentials with extra spaces or line breaks
+- ❌ Looking at wrong Supabase project
+- ❌ Provider not fully saved (must click "Save" after enabling)
+- ❌ Using Bearer Token instead of API Key/Secret (wrong credentials)
+
+### "Something went wrong" Error from X.com
+
+**If you see the X.com error page saying "You weren't able to give access to the App":**
+
+This means X.com is rejecting the OAuth request. Check these settings in your X Developer Portal:
+
+1. **Callback URL must match exactly**:
+   - Go to X Developer Portal → Your App → **Settings** → **User authentication settings**
+   - **Callback URI / Redirect URL** must be: `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   - Replace `<your-project-ref>` with your actual Supabase project reference
+   - Example: `https://vokilettwttlyrxtafrb.supabase.co/auth/v1/callback`
+   - **No trailing slashes**
+   - **Must be HTTPS** (not HTTP)
+   - Must match exactly (case-sensitive)
+
+2. **App Type must be correct**:
+   - In **User authentication settings**, **Type of App** must be: **"Web App, Automated App or Bot"**
+   - NOT "Native App" or other types
+
+3. **App Permissions**:
+   - **App permissions** should be set (usually "Read" is sufficient)
+   - Make sure **"Request email from users"** is turned ON (important!)
+
+4. **Website URL**:
+   - Should be your app's URL (e.g., `https://yourdomain.com` or `http://localhost:3000` for dev)
+   - This is different from the Callback URL
+
+5. **Save all changes** in X Developer Portal
+
+**After fixing, wait 1-2 minutes** for changes to propagate, then try again.
+
+**Note for Localhost Testing:**
+- The callback URI in X.com should **always** be the Supabase callback URL (not localhost)
+- X.com redirects to Supabase, then Supabase redirects to your app (localhost or production)
+- Make sure Supabase has `http://localhost:3000/auth/callback` in its Redirect URLs configuration
+- The "Something went wrong" error often means the app type or permissions aren't configured correctly
+
 ## If You Don't Have OAuth Credentials Yet
 
 You need to create OAuth apps first:
@@ -78,6 +152,13 @@ You need to create OAuth apps first:
 3. **Get Client ID and Secret**
 4. **Add to Supabase** (steps above)
 
+### Twitter/X.com OAuth Setup
+
+1. **Go to X Developer Portal**: https://developer.twitter.com/en/portal/dashboard
+2. **Create OAuth App** (see `docs/OAUTH_SETUP.md` for detailed steps)
+3. **Get API Key and API Key Secret** (these are your Client ID and Secret)
+4. **Add to Supabase** (steps above)
+
 ## Important: Redirect URLs
 
 Make sure your OAuth apps have the correct redirect URL:
@@ -91,10 +172,14 @@ Make sure your OAuth apps have the correct redirect URL:
 
 - Authorization callback URL: `https://<your-project-ref>.supabase.co/auth/v1/callback`
 
+**For Twitter/X.com:**
+
+- Callback URI / Redirect URL: `https://<your-project-ref>.supabase.co/auth/v1/callback`
+
 ## After Enabling
 
 1. **Save the provider settings** in Supabase
-2. **Try logging in again** with Google/GitHub
+2. **Try logging in again** with Google/GitHub/Twitter
 3. **Check browser console** if you still get errors
 
 ## Common Issues

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { LogIn, LogOut, User } from "lucide-react";
 
 /**
- * Auth button with magic link sign-in and OAuth (Google, GitHub).
+ * Auth button with magic link sign-in and OAuth (Google, GitHub, X.com).
  *
  * Why magic links? No passwords to manage, reset, or leak. Email verification
  * is built-in. Users click link in email → authenticated. Simpler UX, better security.
  *
- * Why OAuth? Faster sign-in, no email required. Users trust Google/GitHub for auth.
+ * Why OAuth? Faster sign-in, no email required. Users trust Google/GitHub/X for auth.
  */
 interface AuthButtonProps {
   /**
@@ -24,11 +24,15 @@ interface AuthButtonProps {
   onSignInModalClose?: () => void;
 }
 
-export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: AuthButtonProps = {}) => {
+export const AuthButton = ({
+  forceShowSignIn = false,
+  onSignInModalClose,
+}: AuthButtonProps = {}) => {
   const [user, setUser] = useState<{ email?: string } | null>(null);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [signOutLoading, setSignOutLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
 
@@ -50,15 +54,16 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
         supabase.auth.getSession(),
       ]);
 
-      let currentUser = userResult.data.user || sessionResult.data.session?.user || null;
+      let currentUser =
+        userResult.data.user || sessionResult.data.session?.user || null;
 
       // If browser client can't find session, try server-side check as fallback
       // This helps when cookies aren't immediately readable by browser client
       // The server can read cookies from request headers even if browser client can't
       if (!currentUser) {
         try {
-          const serverResponse = await fetch('/api/auth/session', {
-            credentials: 'include', // Ensure cookies are sent with request
+          const serverResponse = await fetch("/api/auth/session", {
+            credentials: "include", // Ensure cookies are sent with request
           });
           if (serverResponse.ok) {
             const serverData = await serverResponse.json();
@@ -67,7 +72,9 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
               // Trigger a refresh by calling getUser again after a short delay
               // This gives cookies time to be properly set/read
               setTimeout(async () => {
-                const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                const {
+                  data: { user: refreshedUser },
+                } = await supabase.auth.getUser();
                 if (refreshedUser) {
                   setUser(refreshedUser);
                 }
@@ -77,7 +84,7 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
             }
           }
         } catch (error) {
-          console.error('Server-side session check failed:', error);
+          console.error("Server-side session check failed:", error);
         }
       }
 
@@ -91,20 +98,22 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setShowSignIn(false);
-          setMessage(null);
-          // Force a refresh of user data after sign in
-          const { data: { user: updatedUser } } = await supabase.auth.getUser();
-          if (updatedUser) {
-            setUser(updatedUser);
-          }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        setShowSignIn(false);
+        setMessage(null);
+        // Force a refresh of user data after sign in
+        const {
+          data: { user: updatedUser },
+        } = await supabase.auth.getUser();
+        if (updatedUser) {
+          setUser(updatedUser);
         }
       }
-    );
+    });
 
     // Check auth state after OAuth redirect (callback completes and redirects to home)
     // Check multiple times to catch timing issues with cookie propagation
@@ -119,13 +128,13 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
 
     // If coming from OAuth callback (no error in URL), check auth state
     const params = new URLSearchParams(window.location.search);
-    if (params.has('auth') && params.get('auth') === 'success') {
+    if (params.has("auth") && params.get("auth") === "success") {
       // Coming from successful OAuth - check auth state immediately and clean URL
       checkAfterRedirect();
       // Clean the URL param after checking
       const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-    } else if (!params.has('error') && !params.has('checkout')) {
+      window.history.replaceState({}, "", newUrl);
+    } else if (!params.has("error") && !params.has("checkout")) {
       // Might be coming from successful OAuth - check auth state
       checkAfterRedirect();
     }
@@ -134,11 +143,11 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
     const handleFocus = () => {
       checkUser();
     };
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [supabase]);
 
@@ -157,27 +166,61 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
     if (error) {
       setMessage(error.message);
     } else {
-      setMessage('Check your email for the login link!');
+      setMessage("Check your email for the login link!");
     }
 
     setLoading(false);
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setMessage(null);
+    // Optimistically update UI immediately for better UX
+    setSignOutLoading(true);
+    setUser(null);
+
+    try {
+      await supabase.auth.signOut();
+      setMessage(null);
+    } catch (error) {
+      console.error("Sign out error:", error);
+      // If sign out fails, restore user state
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+    } finally {
+      setSignOutLoading(false);
+    }
   };
 
-  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+  const handleOAuthSignIn = async (provider: "google" | "github" | "x") => {
     setOauthLoading(provider);
     setMessage(null);
 
-    // Always use current origin for redirect URL in client-side code
-    // This ensures localhost stays on localhost and production stays on production
-    // NEXT_PUBLIC_APP_URL is for server-side use only (API routes, etc.)
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    // Use NEXT_PUBLIC_APP_URL in production, fall back to window.location.origin for localhost
+    // This ensures correct redirects in both environments
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const redirectUrl = `${baseUrl}/auth/callback`;
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Store the original origin so we can redirect back if Supabase sends us to the wrong domain
+    // This handles the case where Supabase uses site_url (production) instead of referrer (localhost)
+    // Also store provider and timestamp for debugging
+    sessionStorage.setItem("oauth_origin", window.location.origin);
+    sessionStorage.setItem("oauth_provider", provider);
+    sessionStorage.setItem("oauth_timestamp", Date.now().toString());
+
+    // Log the provider and redirect URL for debugging
+    console.log("Attempting OAuth sign-in:", {
+      provider,
+      redirectUrl,
+      baseUrl,
+      isProduction: !!process.env.NEXT_PUBLIC_APP_URL,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      storedOrigin: window.location.origin,
+    });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: redirectUrl,
@@ -185,8 +228,18 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
     });
 
     if (error) {
-      setMessage(error.message);
+      // Log full error details for debugging
+      console.error("OAuth sign-in error:", {
+        provider,
+        error: error.message,
+        errorCode: error.status,
+        fullError: error,
+      });
+      setMessage(`${error.message} (Provider: ${provider})`);
       setOauthLoading(null);
+    } else if (data?.url) {
+      // Success - redirect will happen automatically
+      console.log("OAuth redirect URL generated:", data.url);
     }
     // If successful, user will be redirected to OAuth provider
     // Then redirected back to /auth/callback, then to home page
@@ -201,10 +254,19 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
+          disabled={signOutLoading}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors">
+          {signOutLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              <span>Signing out...</span>
+            </>
+          ) : (
+            <>
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </>
+          )}
         </button>
       </div>
     );
@@ -225,8 +287,7 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
                 setMessage(null);
                 onSignInModalClose?.();
               }}
-              className="text-gray-400 hover:text-gray-200 transition-colors"
-            >
+              className="text-gray-400 hover:text-gray-200 transition-colors">
               ×
             </button>
           </div>
@@ -236,11 +297,10 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => handleOAuthSignIn('google')}
+                onClick={() => handleOAuthSignIn("google")}
                 disabled={!!oauthLoading}
-                className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-900 font-semibold py-2.5 px-4 rounded-lg transition-colors border border-gray-300"
-              >
-                {oauthLoading === 'google' ? (
+                className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-900 font-semibold py-2.5 px-4 rounded-lg transition-colors border border-gray-300">
+                {oauthLoading === "google" ? (
                   <>
                     <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
                     <span>Connecting...</span>
@@ -272,18 +332,20 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
 
               <button
                 type="button"
-                onClick={() => handleOAuthSignIn('github')}
+                onClick={() => handleOAuthSignIn("github")}
                 disabled={!!oauthLoading}
-                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg transition-colors border border-gray-700"
-              >
-                {oauthLoading === 'github' ? (
+                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg transition-colors border border-gray-700">
+                {oauthLoading === "github" ? (
                   <>
                     <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                     <span>Connecting...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24">
                       <path
                         fillRule="evenodd"
                         d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-1.004-.013-1.845-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
@@ -291,6 +353,29 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
                       />
                     </svg>
                     <span>Continue with GitHub</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOAuthSignIn("x")}
+                disabled={!!oauthLoading}
+                className="w-full flex items-center justify-center gap-2 bg-black hover:bg-gray-900 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg transition-colors border border-gray-800">
+                {oauthLoading === "x" ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span>Continue with X</span>
                   </>
                 )}
               </button>
@@ -308,7 +393,9 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
             {/* Email Magic Link Form */}
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-300 mb-2">
                   Email
                 </label>
                 <input
@@ -323,11 +410,12 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
               </div>
 
               {message && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  message.includes('Check your email')
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                }`}>
+                <div
+                  className={`p-3 rounded-lg text-sm ${
+                    message.includes("Check your email")
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  }`}>
                   {message}
                 </div>
               )}
@@ -335,9 +423,8 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
               <button
                 type="submit"
                 disabled={loading || !!oauthLoading}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                {loading ? 'Sending...' : 'Send Magic Link'}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                {loading ? "Sending..." : "Send Magic Link"}
               </button>
             </form>
           </div>
@@ -349,11 +436,9 @@ export const AuthButton = ({ forceShowSignIn = false, onSignInModalClose }: Auth
   return (
     <button
       onClick={() => setShowSignIn(true)}
-      className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
-    >
+      className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors">
       <LogIn className="w-4 h-4" />
       Sign In
     </button>
   );
 };
-

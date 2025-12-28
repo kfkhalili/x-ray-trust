@@ -143,8 +143,77 @@ export default function Home() {
 
   // Load user session, credits, free lookups, and restore search state on mount
   useEffect(() => {
-    // Restore username from URL params
+    // Check if user landed on wrong domain after OAuth error
+    // Supabase sometimes redirects to production (site_url) instead of localhost (referrer)
+    // This happens especially when the state parameter is missing (bad_oauth_callback error)
     const params = new URLSearchParams(window.location.search);
+    const hasOAuthError = params.has("error") && params.has("error_code");
+    const errorCode = params.get("error_code");
+    const errorDescription = params.get("error_description");
+    const storedOrigin = sessionStorage.getItem("oauth_origin");
+
+    // Log OAuth errors for debugging
+    if (hasOAuthError) {
+      console.error("OAuth error detected:", {
+        error: params.get("error"),
+        errorCode,
+        errorDescription,
+        currentOrigin: window.location.origin,
+        storedOrigin,
+        isWrongDomain: storedOrigin && storedOrigin !== window.location.origin,
+      });
+    }
+
+    // Handle redirect if user landed on wrong domain after OAuth error
+    // This is critical for "bad_oauth_callback" errors where state parameter is missing
+    if (hasOAuthError && storedOrigin && storedOrigin !== window.location.origin) {
+      // User started OAuth on a different origin (e.g., localhost) but landed on production
+      // Redirect them back to the original origin with the error params
+      const redirectUrl = new URL(window.location.pathname, storedOrigin);
+      redirectUrl.search = window.location.search;
+      console.log("🔄 Redirecting back to original origin after OAuth error:", {
+        from: window.location.origin,
+        to: storedOrigin,
+        error: params.get("error"),
+        errorCode,
+        errorDescription,
+      });
+      window.location.href = redirectUrl.toString();
+      return; // Don't continue with other initialization
+    }
+
+    // Also handle the case where we're on production but should be on localhost
+    // Check if this is a localhost development scenario (no NEXT_PUBLIC_APP_URL in client)
+    // and we have an OAuth error - redirect to localhost if storedOrigin indicates localhost
+    if (
+      hasOAuthError &&
+      !storedOrigin &&
+      window.location.origin.includes("xtrustradar.com") &&
+      errorCode === "bad_oauth_callback"
+    ) {
+      // This might be a case where sessionStorage was cleared but we're on production
+      // Try to redirect to localhost:3000 if that's where development is happening
+      // This is a fallback for when state parameter is missing and sessionStorage is lost
+      const localhostOrigin = "http://localhost:3000";
+      console.warn(
+        "⚠️ OAuth error on production without stored origin, attempting localhost redirect:",
+        {
+          errorCode,
+          errorDescription,
+          attemptingRedirect: localhostOrigin,
+        }
+      );
+      // Only redirect if we're confident this is a development scenario
+      // (e.g., if there's a way to detect this, or if user explicitly wants this)
+      // For now, we'll log and let the user handle it manually
+    }
+
+    // Clear stored origin if we're on the correct domain (successful redirect)
+    if (storedOrigin === window.location.origin) {
+      sessionStorage.removeItem("oauth_origin");
+    }
+
+    // Restore username from URL params
     const urlUsername = params.get("q");
     if (urlUsername) {
       setUsername(urlUsername);

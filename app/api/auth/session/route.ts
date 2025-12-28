@@ -14,13 +14,22 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  // No session is a valid state, not an error - return 200 OK
+  // Supabase may return an error when there's no session, but that's expected
+  if (!user) {
     return NextResponse.json(
-      { user: null, session: null, error: error?.message || "No session" },
-      { status: 401 }
+      { user: null, session: null, error: null },
+      { status: 200 }
     );
   }
 
+  // If there's an error but we have a user, log it but still return success
+  // This handles edge cases where Supabase returns both user and error
+  if (error) {
+    console.warn("Supabase getUser returned error but user exists:", error.message);
+  }
+
+  // User is authenticated
   return NextResponse.json({
     user: {
       id: user.id,

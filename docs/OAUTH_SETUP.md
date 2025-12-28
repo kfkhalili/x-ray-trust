@@ -1,11 +1,11 @@
-# OAuth Setup Guide (Google & GitHub)
+# OAuth Setup Guide (Google, GitHub & X.com)
 
-This guide explains how to set up Google and GitHub OAuth login for X Trust Radar.
+This guide explains how to set up Google, GitHub, and X.com OAuth login for X Trust Radar.
 
 ## Overview
 
 OAuth credentials are configured in **Supabase Dashboard**, not in your code. You need to:
-1. Create OAuth apps in Google Cloud Console and GitHub
+1. Create OAuth apps in Google Cloud Console, GitHub, and X Developer Portal
 2. Get Client IDs and Secrets
 3. Add them to Supabase Dashboard
 4. Done! The code already handles the OAuth flow.
@@ -54,9 +54,52 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - **Client Secret (for OAuth)**: Your Google Client Secret
 7. Click **Save**
 
-## Step 2: GitHub OAuth Setup
+## Step 2: X.com (Twitter) OAuth Setup
 
-### 2.1 Create GitHub OAuth App
+### 2.1 Create X.com OAuth App
+
+1. Go to [X Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+2. Create a new project (or select existing)
+3. Create a new app within your project
+4. Go to **Settings** → **User authentication settings**
+5. Click **Set up** or **Edit** to configure OAuth
+6. Configure OAuth settings:
+   - **App permissions**: Read (or Read and Write if needed)
+   - **Type of App**: Web App, Automated App or Bot
+   - **Callback URI / Redirect URL**:
+     - `https://<your-project-ref>.supabase.co/auth/v1/callback`
+     - Replace `<your-project-ref>` with your Supabase project reference
+     - Example: `https://abcdefghijklmnop.supabase.co/auth/v1/callback`
+   - **Website URL**: Your app URL (e.g., `https://yourdomain.com`)
+7. Click **Save**
+8. Go to **Keys and tokens** tab
+9. **Copy the API Key** (this is your Client ID)
+10. **Copy the API Key Secret** (this is your Client Secret)
+
+**Note**: X.com uses "API Key" and "API Key Secret" instead of "Client ID" and "Client Secret", but they serve the same purpose.
+
+### 2.2 Add to Supabase
+
+**⚠️ IMPORTANT**: There are TWO Twitter providers in Supabase. You MUST use the correct one:
+
+- ✅ **"X / Twitter (OAuth 2.0)"** - Use this one (the new OAuth 2.0 version)
+- ❌ **"Twitter (Deprecated)"** - Do NOT use this (old OAuth 1.0a, being deprecated)
+
+**Note**: The provider name in code is `'x'` (not `'twitter'`). See [Supabase docs](https://supabase.com/docs/guides/auth/social-login/auth-twitter).
+
+1. Go to [Supabase Dashboard](https://app.supabase.com/)
+2. Select your project
+3. Go to **Authentication** → **Providers**
+4. Find **"X / Twitter (OAuth 2.0)"** (NOT "Twitter (Deprecated)") and click to expand
+5. Toggle **Enable X / Twitter (OAuth 2.0) provider**
+6. Enter:
+   - **Client ID (for OAuth)**: Your X.com API Key
+   - **Client Secret (for OAuth)**: Your X.com API Key Secret
+7. Click **Save**
+
+## Step 3: GitHub OAuth Setup
+
+### 3.1 Create GitHub OAuth App
 
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click **OAuth Apps** → **New OAuth App**
@@ -74,7 +117,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 6. Click **Generate a new client secret**
 7. **Copy the Client Secret** (you'll only see it once!)
 
-### 2.2 Add to Supabase
+### 3.2 Add to Supabase
 
 1. Go to [Supabase Dashboard](https://app.supabase.com/)
 2. Select your project
@@ -86,7 +129,7 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - **Client Secret (for OAuth)**: Your GitHub Client Secret
 7. Click **Save**
 
-## Step 3: Configure for Local Development (If Using Local Supabase)
+## Step 4: Configure for Local Development (If Using Local Supabase)
 
 **⚠️ IMPORTANT: These environment variables are ONLY needed for local Supabase development.**
 
@@ -98,6 +141,8 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    ```
    SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your_google_client_id_here
    SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your_google_client_secret_here
+   SUPABASE_AUTH_EXTERNAL_TWITTER_CLIENT_ID=your_x_api_key_here
+   SUPABASE_AUTH_EXTERNAL_TWITTER_SECRET=your_x_api_key_secret_here
    SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=your_github_client_id_here
    SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=your_github_client_secret_here
    ```
@@ -114,11 +159,15 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - In Google Cloud Console, add: `http://127.0.0.1:54321/auth/v1/callback`
    - (In addition to the production Supabase URL)
 
-4. **Update GitHub OAuth callback URL** to include local Supabase:
+4. **Update X.com OAuth callback URL** to include local Supabase:
+   - In X Developer Portal, add: `http://127.0.0.1:54321/auth/v1/callback`
+   - (In addition to the production Supabase URL)
+
+5. **Update GitHub OAuth callback URL** to include local Supabase:
    - In GitHub Developer Settings, add: `http://127.0.0.1:54321/auth/v1/callback`
    - (In addition to the production Supabase URL)
 
-## Step 4: Configure Redirect URLs in Supabase (Production)
+## Step 5: Configure Redirect URLs in Supabase (Production)
 
 1. In Supabase Dashboard, go to **Authentication** → **URL Configuration**
 2. Set **Site URL**: Your production URL (e.g., `https://yourdomain.com`)
@@ -126,11 +175,11 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
    - `http://localhost:3000/auth/callback` (for local development)
    - `https://yourdomain.com/auth/callback` (for production)
 
-## Step 5: Test OAuth Login
+## Step 6: Test OAuth Login
 
 1. Start your dev server: `npm run dev`
 2. Click **Sign In** button
-3. Click **Continue with Google** or **Continue with GitHub**
+3. Click **Continue with Google**, **Continue with GitHub**, or **Continue with X**
 4. You should be redirected to the OAuth provider
 5. After authorizing, you'll be redirected back and logged in
 
@@ -140,6 +189,10 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 
 **Google:**
 - Check that your redirect URI in Google Cloud Console exactly matches: `https://<project-ref>.supabase.co/auth/v1/callback`
+- Make sure there are no trailing slashes
+
+**X.com:**
+- Check that your Callback URI in X Developer Portal exactly matches: `https://<project-ref>.supabase.co/auth/v1/callback`
 - Make sure there are no trailing slashes
 
 **GitHub:**
@@ -177,7 +230,8 @@ OAuth credentials are configured in **Supabase Dashboard**, not in your code. Yo
 
 After setting up OAuth:
 1. ✅ Test Google login
-2. ✅ Test GitHub login
-3. ✅ Verify profile creation (users should get 3 credits on signup)
-4. ✅ Test in production after deployment
+2. ✅ Test X.com login
+3. ✅ Test GitHub login
+4. ✅ Verify profile creation (users should get 3 credits on signup)
+5. ✅ Test in production after deployment
 
