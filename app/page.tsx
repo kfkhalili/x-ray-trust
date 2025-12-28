@@ -101,6 +101,36 @@ export default function Home() {
     null
   );
 
+  // Clear stale OAuth state immediately on localhost before Supabase initializes
+  // This prevents Supabase from detecting stale OAuth errors from production
+  if (typeof window !== "undefined") {
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname.startsWith("192.168.") ||
+      window.location.hostname.startsWith("10.");
+
+    if (isLocalhost) {
+      const params = new URLSearchParams(window.location.search);
+      const hasOAuthErrorInUrl = params.has("error") && params.has("error_code");
+      const storedOrigin = sessionStorage.getItem("oauth_origin");
+      const oauthTimestamp = sessionStorage.getItem("oauth_timestamp");
+
+      // Clear stale OAuth state if there's no active OAuth flow
+      if (!hasOAuthErrorInUrl) {
+        const timestamp = oauthTimestamp ? parseInt(oauthTimestamp, 10) : 0;
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+        // Clear stale state if older than 5 minutes or if origin is production
+        if (timestamp < fiveMinutesAgo || (storedOrigin && storedOrigin.includes("xtrustradar.com"))) {
+          sessionStorage.removeItem("oauth_origin");
+          sessionStorage.removeItem("oauth_provider");
+          sessionStorage.removeItem("oauth_timestamp");
+        }
+      }
+    }
+  }
+
   const supabaseResult = createClient();
   if (supabaseResult.isErr()) {
     console.error('Failed to create Supabase client:', supabaseResult.error);
@@ -159,7 +189,7 @@ export default function Home() {
     const errorDescription = params.get("error_description");
     const storedOrigin = sessionStorage.getItem("oauth_origin");
 
-    // Log OAuth errors for debugging
+    // Log OAuth errors for debugging (only if they're actually in the URL)
     if (hasOAuthError) {
       console.error("OAuth error detected:", {
         error: params.get("error"),
