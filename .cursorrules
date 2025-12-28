@@ -196,10 +196,12 @@
 
 ```typescript
 // ✅ CORRECT: Returns Result
-export const createClient = async (): Promise<Result<SupabaseClient, Error>> => {
+export const createClient = async (): Promise<
+  Result<SupabaseClient, Error>
+> => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!url) {
-    return err(new Error('NEXT_PUBLIC_SUPABASE_URL must be set'));
+    return err(new Error("NEXT_PUBLIC_SUPABASE_URL must be set"));
   }
   const client = createServerClient(/* ... */);
   return ok(client);
@@ -209,7 +211,7 @@ export const createClient = async (): Promise<Result<SupabaseClient, Error>> => 
 export const createClient = async () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!url) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL must be set'); // NEVER DO THIS
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL must be set"); // NEVER DO THIS
   }
   return createServerClient(/* ... */);
 };
@@ -221,7 +223,7 @@ export const createClient = async () => {
 const clientResult = await createClient();
 if (clientResult.isErr()) {
   return NextResponse.json(
-    { error: 'Server configuration error', code: 'SERVER_ERROR' },
+    { error: "Server configuration error", code: "SERVER_ERROR" },
     { status: 500 }
   );
 }
@@ -234,7 +236,7 @@ const supabase = clientResult.value;
 ```typescript
 const clientResult = createClient();
 if (clientResult.isErr()) {
-  console.error('Failed to create Supabase client:', clientResult.error);
+  console.error("Failed to create Supabase client:", clientResult.error);
   // In development, this should never happen - fail fast
   throw clientResult.error;
 }
@@ -242,6 +244,7 @@ const supabase = clientResult.value;
 ```
 
 **Files to Apply This Pattern:**
+
 - `lib/supabase/server.ts` ✅ (already fixed)
 - `lib/supabase/client.ts` ✅ (already fixed)
 - `lib/stripe.ts` ✅ (already fixed)
@@ -257,12 +260,14 @@ const supabase = clientResult.value;
 
 ```typescript
 // ✅ CORRECT: Type guard with runtime validation
-export const isUsernameRequest = (data: unknown): data is { username: string } => {
+export const isUsernameRequest = (
+  data: unknown
+): data is { username: string } => {
   return (
-    typeof data === 'object' &&
+    typeof data === "object" &&
     data !== null &&
-    'username' in data &&
-    typeof (data as { username: unknown }).username === 'string'
+    "username" in data &&
+    typeof (data as { username: unknown }).username === "string"
   );
 };
 
@@ -273,17 +278,19 @@ if (!isUsernameRequest(body)) {
 const username = body.username; // ✅ Type-safe
 
 // ❌ WRONG: Type assertion (no runtime validation)
-if (typeof body === 'object' && body !== null && 'username' in body) {
+if (typeof body === "object" && body !== null && "username" in body) {
   const username = (body as { username: string }).username; // ❌ Unsafe
 }
 ```
 
 **Where to Use:**
+
 - API route request body validation
 - JSON parsing and validation
 - Any place where you need to narrow `unknown` types
 
 **Files with Type Guards:**
+
 - `lib/validation.ts` - Contains `isUsernameRequest()`, `isCreditsRequest()`, etc.
 - Use these in API routes instead of inline assertions
 
@@ -297,7 +304,7 @@ if (typeof body === 'object' && body !== null && 'username' in body) {
 
 ```typescript
 // ✅ CORRECT: Proper type
-import type { User } from '@supabase/supabase-js';
+import type { User } from "@supabase/supabase-js";
 const [user, setUser] = useState<User | null>(null);
 
 // ❌ WRONG: any type
@@ -305,6 +312,7 @@ const [user, setUser] = useState<any>(null);
 ```
 
 **Common Fixes:**
+
 - Supabase `User` type: `import type { User } from '@supabase/supabase-js'`
 - Component props: Use proper interface types
 - API responses: Use type guards to validate and narrow types
@@ -375,17 +383,6 @@ const [user, setUser] = useState<User | null>(null);
 // ❌ WRONG: Direct assignment (type mismatch)
 <CreditModal user={user} /> // Error: User | null is not assignable to User | undefined
 ```
-
-### Key Takeaways from Architectural Review
-
-1. **Client creation is a boundary** - Always return Result types, never throw
-2. **Type guards are mandatory** - No type assertions allowed
-3. **Zero tolerance for `any`** - Always use proper types
-4. **Compose Results functionally** - Use `andThen()`, `map()`, etc.
-5. **Handle Results at boundaries** - API routes, component initialization
-6. **Test error paths** - Result types make error handling testable
-
-**Reference:** See `docs/ARCHITECTURAL_REVIEW.md` for complete review and implementation details.
 
 ## Git Workflow
 
