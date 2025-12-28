@@ -43,7 +43,13 @@ export const AuthButton = ({
     }
   }, [forceShowSignIn]);
 
-  const supabase = createClient();
+  const supabaseResult = createClient();
+  if (supabaseResult.isErr()) {
+    console.error('Failed to create Supabase client:', supabaseResult.error);
+    // In development, this should never happen - fail fast
+    throw supabaseResult.error;
+  }
+  const supabase = supabaseResult.value;
 
   useEffect(() => {
     // Check current session on mount and after redirects

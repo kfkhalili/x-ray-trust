@@ -32,8 +32,13 @@ const verifyWebhookSignature = async (
     return err(new Error('Missing stripe-signature header'));
   }
 
+  const stripeResult = stripe();
+  if (stripeResult.isErr()) {
+    return err(stripeResult.error);
+  }
+
   try {
-    const event = stripe().webhooks.constructEvent(body, signature, webhookSecret);
+    const event = stripeResult.value.webhooks.constructEvent(body, signature, webhookSecret);
     return ok(event);
   } catch (error) {
     return err(error instanceof Error ? error : new Error('Invalid webhook signature'));

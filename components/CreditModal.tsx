@@ -4,12 +4,13 @@ import { useState } from "react";
 import { X, CreditCard } from "lucide-react";
 import { createCheckoutSession } from "@/lib/fetch-utils";
 import { AuthButton } from "./AuthButton";
+import type { User } from "@supabase/supabase-js";
 
 interface CreditModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCredits: number;
-  user?: any; // User object from Supabase, undefined if not signed in
+  user?: User; // User object from Supabase, undefined if not signed in
 }
 
 /**

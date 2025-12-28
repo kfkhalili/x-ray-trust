@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { CookieBanner } from "@/components/CookieBanner";
 import type { TrustReport } from "@/types/trust";
 import { verifyAccount } from "@/lib/fetch-utils";
+import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Countdown component for free lookup reset timer.
@@ -90,17 +91,23 @@ export default function Home() {
   const [credits, setCredits] = useState<number | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [freeLookupsRemaining, setFreeLookupsRemaining] = useState<
     number | null
   >(null);
   const [nextResetTime, setNextResetTime] = useState<number | null>(null);
   // Track current subscription to cleanup on unmount or username change
-  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(
+  const subscriptionRef = useRef<ReturnType<SupabaseClient['channel']> | null>(
     null
   );
 
-  const supabase = createClient();
+  const supabaseResult = createClient();
+  if (supabaseResult.isErr()) {
+    console.error('Failed to create Supabase client:', supabaseResult.error);
+    // In development, this should never happen - fail fast
+    throw supabaseResult.error;
+  }
+  const supabase = supabaseResult.value;
 
   // Ref to track if we're currently fetching credits (prevents race conditions)
   const fetchingCreditsRef = useRef(false);
@@ -793,7 +800,7 @@ export default function Home() {
           isOpen={showCreditModal}
           onClose={() => setShowCreditModal(false)}
           currentCredits={credits ?? 0}
-          user={user}
+          user={user ?? undefined}
         />
 
         {/* Footer */}

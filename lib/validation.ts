@@ -77,6 +77,18 @@ const isUsernameRequestBody = (data: unknown): data is { username?: string } => 
 };
 
 /**
+ * Type guard for request body with required username.
+ */
+export const isUsernameRequest = (data: unknown): data is { username: string } => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'username' in data &&
+    typeof (data as { username: unknown }).username === 'string'
+  );
+};
+
+/**
  * Type guard for request body with credits.
  */
 const isCreditsRequestBody = (data: unknown): data is { credits?: number } => {
@@ -84,6 +96,18 @@ const isCreditsRequestBody = (data: unknown): data is { credits?: number } => {
     typeof data === 'object' &&
     data !== null &&
     (!('credits' in data) || typeof (data as { credits: unknown }).credits === 'number')
+  );
+};
+
+/**
+ * Type guard for request body with required credits.
+ */
+export const isCreditsRequest = (data: unknown): data is { credits: number } => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'credits' in data &&
+    typeof (data as { credits: unknown }).credits === 'number'
   );
 };
 

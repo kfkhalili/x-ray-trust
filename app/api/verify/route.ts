@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { calculateTrust } from "@/lib/trust-engine";
 import type { XRawData, TrustReport } from "@/types/trust";
 import { Result, ok, err } from "neverthrow";
+import { isUsernameRequest } from "@/lib/validation";
 
 // Mark route as dynamic to prevent build-time analysis
 export const dynamic = "force-dynamic";
@@ -321,7 +322,11 @@ const fetchXAccountData = async (
  * Returns Result type for functional error handling.
  */
 const deductCredit = async (userId: string): Promise<Result<void, Error>> => {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return err(supabaseResult.error);
+  }
+  const supabase = supabaseResult.value;
 
   // Get current credits with row-level lock to prevent race conditions
   const { data: profile, error: fetchError } = await supabase
@@ -364,7 +369,11 @@ const deductCredit = async (userId: string): Promise<Result<void, Error>> => {
 const getCachedVerification = async (
   normalizedUsername: string
 ): Promise<Result<TrustReport | null, Error>> => {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return err(supabaseResult.error);
+  }
+  const supabase = supabaseResult.value;
 
   const { data, error } = await supabase
     .from("verifications")
@@ -407,7 +416,11 @@ const getCachedVerification = async (
 const markAsPending = async (
   normalizedUsername: string
 ): Promise<Result<boolean, Error>> => {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return err(supabaseResult.error);
+  }
+  const supabase = supabaseResult.value;
 
   // Call secure database function (SECURITY DEFINER)
   // This is safer than using service role key in application code
@@ -435,7 +448,11 @@ const storeVerification = async (
   rawData: XRawData,
   trustReport: TrustReport
 ): Promise<Result<void, Error>> => {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return err(supabaseResult.error);
+  }
+  const supabase = supabaseResult.value;
 
   console.log("Attempting to store verification for username:", normalizedUsername);
 
@@ -477,7 +494,14 @@ const storeVerification = async (
  * This ensures users aren't charged for failed lookups or cached results.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return NextResponse.json<ErrorResponse>(
+      { error: 'Server configuration error', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
+  const supabase = supabaseResult.value;
 
   // Parse request body - handle JSON parsing errors functionally
   let body: unknown;
@@ -490,13 +514,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Validate request body shape
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("username" in body) ||
-    typeof (body as { username: unknown }).username !== "string"
-  ) {
+  // Validate request body shape using type guard
+  if (!isUsernameRequest(body)) {
     return NextResponse.json<ErrorResponse>(
       {
         error: "Username is required and must be a string",
@@ -506,8 +525,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const validatedBody = body as { username: string };
-  const normalizedUsername = normalizeUsername(validatedBody.username);
+  const normalizedUsername = normalizeUsername(body.username);
 
   // Try to authenticate user (optional for free lookups)
   const {
@@ -636,7 +654,7 @@ export async function POST(request: NextRequest) {
   }
 
   // We're the first request - fetch from API
-  const accountDataResult = await fetchXAccountData(validatedBody.username);
+  const accountDataResult = await fetchXAccountData(body.username);
 
   if (accountDataResult.isErr()) {
     const errorMessage = accountDataResult.error.message;
@@ -644,13 +662,15 @@ export async function POST(request: NextRequest) {
 
     // Mark as error in cache so we don't retry immediately
     // Use secure function instead of admin client
-    const supabaseForError = await createClient();
-    await supabaseForError.rpc("store_verification", {
-      p_username: normalizedUsername,
-      p_raw_data: {} as XRawData,
-      p_trust_report: {} as TrustReport,
-      p_status: "error",
-    });
+    const supabaseForErrorResult = await createClient();
+    if (supabaseForErrorResult.isOk()) {
+      await supabaseForErrorResult.value.rpc("store_verification", {
+        p_username: normalizedUsername,
+        p_raw_data: {} as XRawData,
+        p_trust_report: {} as TrustReport,
+        p_status: "error",
+      });
+    }
 
     // Handle rate limit errors specifically
     if (errorMessage === "RATE_LIMIT_EXCEEDED") {

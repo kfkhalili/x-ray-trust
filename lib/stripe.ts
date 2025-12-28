@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { Result, ok, err } from "neverthrow";
 
 /**
  * Stripe client for server-side payment operations.
@@ -9,24 +10,26 @@ import Stripe from "stripe";
  * Why lazy initialization? During build time, environment variables might not be
  * available. We create the client only when needed (lazy initialization) to prevent
  * build-time errors in Vercel.
+ *
+ * Returns Result type for functional error handling instead of throwing.
  */
 let stripeInstance: Stripe | null = null;
 
-export const stripe = (): Stripe => {
+export const stripe = (): Result<Stripe, Error> => {
   if (stripeInstance) {
-    return stripeInstance;
+    return ok(stripeInstance);
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
-    throw new Error("STRIPE_SECRET_KEY must be set");
+    return err(new Error("STRIPE_SECRET_KEY must be set"));
   }
 
   stripeInstance = new Stripe(secretKey, {
     apiVersion: "2025-12-15.clover",
   });
 
-  return stripeInstance;
+  return ok(stripeInstance);
 };
 
 /**

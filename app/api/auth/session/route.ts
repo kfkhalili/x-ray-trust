@@ -11,7 +11,14 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return NextResponse.json(
+      { user: null, session: null, error: 'Server configuration error' },
+      { status: 500 }
+    );
+  }
+  const supabase = supabaseResult.value;
   const { data: { user }, error } = await supabase.auth.getUser();
 
   // No session is a valid state, not an error - return 200 OK

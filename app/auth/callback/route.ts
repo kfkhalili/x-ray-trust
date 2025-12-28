@@ -154,7 +154,21 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const supabase = await createClient();
+    const supabaseResult = await createClient();
+    if (supabaseResult.isErr()) {
+      const redirectOrigin = getRedirectOrigin(
+        requestUrl,
+        originalRedirectUrl,
+        request
+      );
+      return NextResponse.redirect(
+        new URL(
+          `/?error=auth_failed&details=${encodeURIComponent('Server configuration error')}`,
+          redirectOrigin
+        )
+      );
+    }
+    const supabase = supabaseResult.value;
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.session) {

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { stripe, CREDIT_PACKS } from '@/lib/stripe';
 import { Result, ok, err } from 'neverthrow';
 import type Stripe from 'stripe';
+import { isCreditsRequest } from '@/lib/validation';
 
 // Mark route as dynamic to prevent build-time analysis
 export const dynamic = 'force-dynamic';
@@ -56,7 +57,12 @@ const createCheckoutSession = async (
     // For Kleingewerbe: No VAT info needed, just business name
     const statementDescriptor = process.env.STRIPE_STATEMENT_DESCRIPTOR || 'XTRUSTRADAR';
 
-    const session = await stripe().checkout.sessions.create({
+    const stripeResult = stripe();
+    if (stripeResult.isErr()) {
+      return err(stripeResult.error);
+    }
+
+    const session = await stripeResult.value.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [
@@ -88,7 +94,14 @@ const createCheckoutSession = async (
 };
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabaseResult = await createClient();
+  if (supabaseResult.isErr()) {
+    return NextResponse.json<ErrorResponse>(
+      { error: 'Server configuration error', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
+  const supabase = supabaseResult.value;
 
   // Authenticate user
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -111,24 +124,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Validate request body shape
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    !('credits' in body) ||
-    typeof (body as { credits: unknown }).credits !== 'number'
-  ) {
+  // Validate request body shape using type guard
+  if (!isCreditsRequest(body)) {
     return NextResponse.json<ErrorResponse>(
       { error: 'Credits amount is required and must be a number', code: 'INVALID_INPUT' },
       { status: 400 }
     );
   }
 
-  const validatedBody = body as { credits: number };
-
   // Find Price ID for requested credit amount
   const priceId = Array.from(CREDIT_PACKS.entries())
-    .find(([, creditAmount]) => creditAmount === validatedBody.credits)?.[0];
+    .find(([, creditAmount]) => creditAmount === body.credits)?.[0];
 
   if (!priceId) {
     return NextResponse.json<ErrorResponse>(
@@ -138,7 +144,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Create Stripe Checkout session - using Result type
-  const sessionResult = await createCheckoutSession(priceId, user.id, validatedBody.credits, user.email || undefined, request);
+  const sessionResult = await createCheckoutSession(priceId, user.id, body.credits, user.email || undefined, request);
 
   if (sessionResult.isErr()) {
     console.error('Checkout error:', sessionResult.error.message);
