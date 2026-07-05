@@ -6,6 +6,7 @@ import { TrustResults } from "@/components/TrustResults";
 import { Footer } from "@/components/Footer";
 import type { TrustReport } from "@/types/trust";
 import { verifyAccount } from "@/lib/fetch-utils";
+import { normalizeHandle } from "@/lib/handle";
 
 /**
  * Maps an API error code to a user-friendly message.
@@ -50,8 +51,8 @@ export default function Home() {
   }, []);
 
   const handleVerify = async () => {
-    const cleanUsername = username.trim().replace(/^@+/, "");
-    if (!cleanUsername) {
+    const handle = normalizeHandle(username);
+    if (!handle) {
       setError("Please enter a username");
       return;
     }
@@ -59,7 +60,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
 
-    const result = await verifyAccount(cleanUsername);
+    const result = await verifyAccount(handle);
     setLoading(false);
 
     if (result.isErr()) {
@@ -72,7 +73,7 @@ export default function Home() {
 
     // Update URL for a shareable link.
     const url = new URL(window.location.href);
-    url.searchParams.set("q", cleanUsername);
+    url.searchParams.set("q", handle);
     window.history.pushState({}, "", url.toString());
   };
 
