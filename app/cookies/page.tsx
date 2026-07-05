@@ -29,8 +29,10 @@ export default function CookiesPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">2. How We Use Cookies</h2>
             <p>
-              We use cookies for authentication and session management. These are essential cookies
-              required for the service to function properly.
+              We do not use cookies for advertising or cross-site tracking, and the Service has no
+              login, so we set no authentication cookies. We store a small amount of data in your
+              browser&apos;s local and session storage — your cookie-consent choice and your most
+              recent search result — which stays on your device and is not sent to us.
             </p>
           </section>
 
@@ -38,12 +40,12 @@ export default function CookiesPage() {
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">3. Types of Cookies</h2>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>
-                <strong>Essential Cookies:</strong> Required for authentication and session management.
-                These cannot be disabled.
+                <strong>Local Storage:</strong> Remembers your cookie-consent choice so we don&apos;t
+                ask again.
               </li>
               <li>
-                <strong>Functional Cookies:</strong> Used to remember your preferences and improve
-                your experience.
+                <strong>Session Storage:</strong> Preserves your most recent search result during your
+                visit. Cleared when you close your browser.
               </li>
             </ul>
           </section>
@@ -51,8 +53,7 @@ export default function CookiesPage() {
           <section>
             <h2 className="text-2xl font-semibold text-gray-100 mb-4">4. Third-Party Cookies</h2>
             <p>
-              We use Supabase for authentication, which may set cookies for session management.
-              We do not use advertising or tracking cookies.
+              We do not set third-party cookies, and we do not use advertising or tracking cookies.
             </p>
           </section>
 

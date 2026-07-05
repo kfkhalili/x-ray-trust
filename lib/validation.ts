@@ -22,18 +22,6 @@ export const parseJson = <T>(
 };
 
 /**
- * Type guard for checkout response.
- */
-const isCheckoutResponse = (data: unknown): data is { url: string } => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'url' in data &&
-    typeof (data as { url: unknown }).url === 'string'
-  );
-};
-
-/**
  * Type guard for error response.
  * Includes optional nextResetTime for countdown display.
  */
@@ -52,28 +40,10 @@ const isErrorResponse = (data: unknown): data is { error: string; code: string; 
 };
 
 /**
- * Safely parses checkout response JSON.
- */
-export const parseCheckoutResponse = (json: unknown): Result<{ url: string }, Error> => {
-  return parseJson(json, isCheckoutResponse);
-};
-
-/**
  * Safely parses error response JSON.
  */
 export const parseErrorResponse = (json: unknown): Result<{ error: string; code: string; nextResetTime?: number | null }, Error> => {
   return parseJson(json, isErrorResponse);
-};
-
-/**
- * Type guard for request body with username.
- */
-const isUsernameRequestBody = (data: unknown): data is { username?: string } => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    (!('username' in data) || typeof (data as { username: unknown }).username === 'string')
-  );
 };
 
 /**
@@ -86,43 +56,6 @@ export const isUsernameRequest = (data: unknown): data is { username: string } =
     'username' in data &&
     typeof (data as { username: unknown }).username === 'string'
   );
-};
-
-/**
- * Type guard for request body with credits.
- */
-const isCreditsRequestBody = (data: unknown): data is { credits?: number } => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    (!('credits' in data) || typeof (data as { credits: unknown }).credits === 'number')
-  );
-};
-
-/**
- * Type guard for request body with required credits.
- */
-export const isCreditsRequest = (data: unknown): data is { credits: number } => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'credits' in data &&
-    typeof (data as { credits: unknown }).credits === 'number'
-  );
-};
-
-/**
- * Safely parses username request body.
- */
-export const parseUsernameRequest = (json: unknown): Result<{ username?: string }, Error> => {
-  return parseJson(json, isUsernameRequestBody);
-};
-
-/**
- * Safely parses credits request body.
- */
-export const parseCreditsRequest = (json: unknown): Result<{ credits?: number }, Error> => {
-  return parseJson(json, isCreditsRequestBody);
 };
 
 /**
@@ -152,4 +85,3 @@ export const isTrustReport = (data: unknown): data is import('@/types/trust').Tr
 export const parseTrustReport = (json: unknown): Result<import('@/types/trust').TrustReport, Error> => {
   return parseJson(json, isTrustReport);
 };
-

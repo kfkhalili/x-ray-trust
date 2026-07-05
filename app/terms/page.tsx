@@ -1,7 +1,7 @@
 /**
  * Terms of Service page.
  *
- * Comprehensive terms covering service usage, payments, credits, and user responsibilities.
+ * Comprehensive terms covering service usage and user responsibilities.
  * These terms should be reviewed by a legal professional before production deployment.
  */
 export default function TermsPage() {
@@ -49,59 +49,30 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-100 mb-4">3. Account Registration and User Responsibilities</h2>
+            <h2 className="text-2xl font-semibold text-gray-100 mb-4">3. Using the Service</h2>
             <p className="mb-3">
-              To access certain features of the Service, you may be required to create an account. You agree to:
+              The Service does not require an account. There is no registration, login, or stored credentials. You may use it simply by entering a public X (Twitter) username to analyze.
             </p>
-            <ul className="list-disc list-inside space-y-2 ml-4 mb-3">
-              <li>Provide accurate, current, and complete information during registration</li>
-              <li>Maintain and update your account information to keep it accurate</li>
-              <li>Maintain the confidentiality of your account credentials</li>
-              <li>Accept responsibility for all activities that occur under your account</li>
-              <li>Notify us immediately of any unauthorized use of your account</li>
-            </ul>
             <p>
-              You are responsible for maintaining the security of your account. We are not liable for any loss or damage arising from your failure to protect your account credentials.
+              You are responsible for using the Service in accordance with these Terms and applicable law.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-100 mb-4">4. Free Lookups and Credit System</h2>
-            <p className="mb-3">
-              The Service operates on a credit-based system:
-            </p>
+            <h2 className="text-2xl font-semibold text-gray-100 mb-4">4. Usage Limits and Caching</h2>
             <ul className="list-disc list-inside space-y-2 ml-4 mb-3">
-              <li><strong>Free Lookups:</strong> All users (authenticated and unauthenticated) receive 3 free lookups per hour, tracked by IP address. Free lookups reset 1 hour after the first lookup in each period.</li>
-              <li><strong>Credits:</strong> Authenticated users can purchase credits to perform additional verifications. Each verification consumes one credit.</li>
-              <li><strong>Caching:</strong> Verifications are cached for 24 hours. Viewing cached results does not consume credits or free lookups.</li>
+              <li><strong>Rate Limit:</strong> To prevent abuse, lookups are rate-limited per IP address. If you exceed the limit, please wait a short time before trying again.</li>
+              <li><strong>Caching:</strong> Verification results are cached for up to 24 hours. Viewing a cached result does not count against the rate limit.</li>
             </ul>
-            <p className="mb-3">
-              We reserve the right to modify free lookup limits, credit pricing, or caching policies at any time. Changes will be communicated through the Service interface or via email.
-            </p>
             <p>
-              Credits are non-transferable and cannot be exchanged for cash or other services. Unused credits do not expire unless your account is terminated for violation of these Terms.
+              We reserve the right to modify the rate limit or caching behavior at any time. Changes will be reflected in the Service.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-100 mb-4">5. Payment and Refunds</h2>
-            <p className="mb-3">
-              All payments are processed securely through Stripe, a third-party payment processor. We do not store or have access to your full payment card details.
-            </p>
-            <p className="mb-3">
-              <strong>Credit Purchases:</strong> Credits are generally non-refundable once purchased. However, we may provide refunds in exceptional circumstances, including:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4 mb-3">
-              <li>Service unavailability due to technical issues on our end that prevent you from using purchased credits</li>
-              <li>Duplicate charges or billing errors</li>
-              <li>Unauthorized transactions on your account</li>
-              <li>Other circumstances at our sole discretion</li>
-            </ul>
-            <p className="mb-3">
-              To request a refund, please contact us at <a href="mailto:support@xtrustradar.com" className="text-emerald-400 hover:text-emerald-300 underline">support@xtrustradar.com</a> within 30 days of purchase. Refund requests are reviewed on a case-by-case basis and may take up to 10 business days to process.
-            </p>
+            <h2 className="text-2xl font-semibold text-gray-100 mb-4">5. Cost</h2>
             <p>
-              <strong>EU Consumer Rights:</strong> If you are a consumer resident in the European Union, you have the right to withdraw from a distance contract within 14 days of purchase under EU consumer protection law. However, if you have already used the credits, this right may be limited.
+              The Service is currently provided free of charge. There are no accounts, purchases, credits, or payments. If we introduce paid features in the future, we will update these Terms accordingly.
             </p>
           </section>
 
@@ -121,7 +92,7 @@ export default function TermsPage() {
               <li>To use automated systems (bots, scripts) to access the Service without permission</li>
             </ul>
             <p>
-              Violation of these restrictions may result in immediate termination of your account and forfeiture of any unused credits, without refund.
+              Violation of these restrictions may result in immediate suspension of your access to the Service.
             </p>
           </section>
 
@@ -150,9 +121,7 @@ export default function TermsPage() {
               The Service integrates with third-party services:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4 mb-3">
-              <li><strong>Supabase:</strong> Used for authentication and data storage</li>
-              <li><strong>Stripe:</strong> Used for payment processing</li>
-              <li><strong>twitterapi.io:</strong> Used as a data source for X account metadata</li>
+              <li><strong>RapidAPI:</strong> Used to access a third-party X (Twitter) data provider for public account metadata</li>
             </ul>
             <p>
               Your use of these third-party services is subject to their respective terms of service and privacy policies. We are not responsible for the availability, accuracy, or practices of third-party services.

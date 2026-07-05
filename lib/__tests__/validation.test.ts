@@ -1,9 +1,6 @@
 import {
   parseJson,
-  parseCheckoutResponse,
   parseErrorResponse,
-  parseUsernameRequest,
-  parseCreditsRequest,
   isTrustReport,
   parseTrustReport,
 } from "../validation";
@@ -48,30 +45,6 @@ describe("Validation Utilities", () => {
     });
   });
 
-  describe("parseCheckoutResponse", () => {
-    it("should parse valid checkout response", () => {
-      const valid = { url: "https://checkout.stripe.com/test" };
-      const result = parseCheckoutResponse(valid);
-
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.url).toBe("https://checkout.stripe.com/test");
-      }
-    });
-
-    it("should return error for missing url", () => {
-      const invalid = {};
-      const result = parseCheckoutResponse(invalid);
-      expect(result.isErr()).toBe(true);
-    });
-
-    it("should return error for non-string url", () => {
-      const invalid = { url: 123 };
-      const result = parseCheckoutResponse(invalid);
-      expect(result.isErr()).toBe(true);
-    });
-  });
-
   describe("parseErrorResponse", () => {
     it("should parse valid error response", () => {
       const valid = { error: "Something went wrong", code: "ERROR_CODE" };
@@ -93,54 +66,6 @@ describe("Validation Utilities", () => {
     it("should return error for missing code field", () => {
       const invalid = { error: "Something went wrong" };
       const result = parseErrorResponse(invalid);
-      expect(result.isErr()).toBe(true);
-    });
-  });
-
-  describe("parseUsernameRequest", () => {
-    it("should parse valid username request", () => {
-      const valid = { username: "testuser" };
-      const result = parseUsernameRequest(valid);
-
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.username).toBe("testuser");
-      }
-    });
-
-    it("should parse request without username (optional)", () => {
-      const valid = {};
-      const result = parseUsernameRequest(valid);
-      expect(result.isOk()).toBe(true);
-    });
-
-    it("should return error for non-string username", () => {
-      const invalid = { username: 123 };
-      const result = parseUsernameRequest(invalid);
-      expect(result.isErr()).toBe(true);
-    });
-  });
-
-  describe("parseCreditsRequest", () => {
-    it("should parse valid credits request", () => {
-      const valid = { credits: 50 };
-      const result = parseCreditsRequest(valid);
-
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.credits).toBe(50);
-      }
-    });
-
-    it("should parse request without credits (optional)", () => {
-      const valid = {};
-      const result = parseCreditsRequest(valid);
-      expect(result.isOk()).toBe(true);
-    });
-
-    it("should return error for non-number credits", () => {
-      const invalid = { credits: "50" };
-      const result = parseCreditsRequest(invalid);
       expect(result.isErr()).toBe(true);
     });
   });
