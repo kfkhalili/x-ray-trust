@@ -18,6 +18,8 @@ const messageForError = (code: string): string => {
       return "Account not found. Please check the username and try again.";
     case "RATE_LIMIT_EXCEEDED":
       return "Too many lookups right now. Please wait a moment and try again.";
+    case "SERVICE_AT_CAPACITY":
+      return "This service has reached its monthly capacity. Please try again later.";
     case "SERVER_ERROR":
       return "Verification is temporarily unavailable (server configuration). Please try again later.";
     case "UPSTREAM_ERROR":

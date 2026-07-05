@@ -13,9 +13,20 @@ export const dynamic = "force-dynamic";
  */
 const CACHE_FRESHNESS_MS = 24 * 60 * 60 * 1000;
 
-/** Per-IP rate limit: protects the (paid) upstream from being drained. */
+/** Per-IP rate limit: stops one visitor from draining the paid upstream. */
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const RATE_LIMIT_MAX = 20; // lookups per IP per window
+const RATE_LIMIT_MAX = 10; // lookups per IP per hour
+
+/**
+ * Global monthly cap on PAID upstream calls, to guard against overage on the
+ * RapidAPI plan (default plan is 1000/month; we stop at 950 for headroom).
+ *
+ * ⚠️ Best-effort only: like the cache below, this counter lives in process
+ * memory, so on serverless it resets on cold start and is per-instance. It is
+ * NOT a hard guarantee across a fleet — also set a hard request limit (no
+ * overage) in the RapidAPI dashboard for real billing protection.
+ */
+const MONTHLY_BUDGET = Number(process.env.RAPIDAPI_MONTHLY_BUDGET ?? 950);
 
 /**
  * Data provider: RapidAPI. Defaults to the `twitter241` API (davethebeast),
@@ -84,6 +95,35 @@ const withinRateLimit = (ip: string): boolean => {
 };
 
 // ---------------------------------------------------------------------------
+// Global monthly budget: caps how many PAID upstream calls we make per month
+// so we never blow past the RapidAPI plan quota. (Best-effort in memory — see
+// the note on MONTHLY_BUDGET.)
+// ---------------------------------------------------------------------------
+let budgetMonth = "";
+let budgetUsed = 0;
+
+const currentMonthKey = (): string => {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+};
+
+/** Remaining paid calls this month (auto-resets when the UTC month rolls over). */
+const budgetRemaining = (): number => {
+  const key = currentMonthKey();
+  if (key !== budgetMonth) {
+    budgetMonth = key;
+    budgetUsed = 0;
+  }
+  return Math.max(0, MONTHLY_BUDGET - budgetUsed);
+};
+
+/** Records one paid upstream call against the monthly budget. */
+const recordUpstreamCall = (): void => {
+  budgetRemaining(); // ensure the month window is current before incrementing
+  budgetUsed += 1;
+};
+
+// ---------------------------------------------------------------------------
 // Provider adapter.
 //
 // Returns Result<XRawData, Error> where the Error message is one of the codes
@@ -93,49 +133,67 @@ const withinRateLimit = (ip: string): boolean => {
 // ---------------------------------------------------------------------------
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type LegacyUser = Record<string, any>;
 type ExtractedUser = {
   restId?: string;
   isBlueVerified?: boolean;
-  legacy?: LegacyUser;
+  createdAt?: string;
+  name?: string;
+  screenName?: string;
+  profilePicture?: string;
+  description?: string;
+  isProtected?: boolean;
+  followersCount?: number;
+  friendsCount?: number;
+  listedCount?: number;
+  statusesCount?: number;
+  mediaCount?: number;
+  favouritesCount?: number;
 };
 
 /**
- * Locates the X user object inside a RapidAPI response. Defensive against the
- * common nesting variants so a small shape difference between RapidAPI X APIs
- * doesn't break the mapping. The canonical `twitter241` path is
- * `result.data.user.result.{rest_id,is_blue_verified,legacy}`.
+ * Extracts an X user from a RapidAPI response.
  *
- * ⚠️ Verify against a live response once RAPIDAPI_KEY is set (see README notes).
+ * Built for twitter241's current schema, where the fields are split across
+ * `core` (created_at, name, screen_name), `legacy` (follower/status counts,
+ * description), `privacy` (protected) and `verification`, with the avatar under
+ * `avatar.image_url`. Falls back to the older all-in-`legacy` shape so a schema
+ * or provider change is less likely to break it.
  */
 const extractUser = (json: any): ExtractedUser | null => {
-  const candidates = [
-    json?.result?.data?.user?.result,
-    json?.data?.user?.result,
-    json?.user?.result,
-    json?.result,
-    json,
-  ];
-  for (const c of candidates) {
-    if (!c || typeof c !== "object") continue;
-    // Standard X-GraphQL shape: fields live under `legacy`.
-    if (c.legacy && (c.legacy.screen_name || c.legacy.followers_count !== undefined)) {
-      return {
-        restId: c.rest_id ?? c.legacy.id_str,
-        isBlueVerified: c.is_blue_verified ?? c.legacy.verified,
-        legacy: c.legacy,
-      };
-    }
-    // Flatter shape: fields at the top level.
-    if (c.screen_name || c.followers_count !== undefined) {
-      return {
-        restId: c.rest_id ?? c.id_str ?? c.id,
-        isBlueVerified: c.is_blue_verified ?? c.verified,
-        legacy: c,
-      };
-    }
-  }
-  return null;
+  const r =
+    json?.result?.data?.user?.result ??
+    json?.data?.user?.result ??
+    json?.user?.result ??
+    json?.result ??
+    json;
+  if (!r || typeof r !== "object") return null;
+
+  const legacy = r.legacy ?? {};
+  const core = r.core ?? {};
+
+  const screenName = core.screen_name ?? legacy.screen_name ?? r.screen_name;
+  const followersCount = legacy.followers_count ?? r.followers_count;
+
+  // Need at least a handle or a follower count to treat this as a real account.
+  if (!screenName && followersCount === undefined) return null;
+
+  return {
+    restId: r.rest_id ?? legacy.id_str ?? r.id_str,
+    isBlueVerified:
+      r.is_blue_verified ?? r.verification?.verified ?? legacy.verified,
+    createdAt: core.created_at ?? legacy.created_at,
+    name: core.name ?? legacy.name ?? screenName,
+    screenName,
+    profilePicture: r.avatar?.image_url ?? legacy.profile_image_url_https,
+    description: legacy.description ?? r.description,
+    isProtected: r.privacy?.protected ?? legacy.protected,
+    followersCount,
+    friendsCount: legacy.friends_count ?? r.friends_count,
+    listedCount: legacy.listed_count,
+    statusesCount: legacy.statuses_count,
+    mediaCount: legacy.media_count,
+    favouritesCount: legacy.favourites_count,
+  };
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -148,8 +206,9 @@ const fetchXAccountData = async (
     return err(new Error("CONFIG_ERROR"));
   }
 
+  let response: Response;
   try {
-    const response = await fetch(
+    response = await fetch(
       `https://${RAPIDAPI_HOST}/user?username=${encodeURIComponent(username)}`,
       {
         headers: {
@@ -158,66 +217,68 @@ const fetchXAccountData = async (
         },
       }
     );
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error("RapidAPI error:", response.status, responseText.slice(0, 300));
-      if (response.status === 404) return err(new Error("ACCOUNT_NOT_FOUND"));
-      if (response.status === 429) return err(new Error("RATE_LIMIT_EXCEEDED"));
-      // 401/403 (bad key), 5xx, etc. are our/upstream problem, not a missing account.
-      return err(new Error("UPSTREAM_ERROR"));
-    }
-
-    let json: unknown;
-    try {
-      json = JSON.parse(responseText);
-    } catch {
-      console.error("Failed to parse RapidAPI response:", responseText.slice(0, 300));
-      return err(new Error("UPSTREAM_ERROR"));
-    }
-
-    const user = extractUser(json);
-    if (!user?.legacy?.screen_name) {
-      // No user object / unavailable / suspended → genuinely not found.
-      return err(new Error("ACCOUNT_NOT_FOUND"));
-    }
-
-    const legacy = user.legacy;
-    const id = user.restId ?? legacy.id_str ?? "";
-    const createdAt = legacy.created_at ?? "";
-    const blueVerified = Boolean(user.isBlueVerified ?? legacy.verified ?? false);
-
-    const data: XRawData = {
-      id,
-      created_at: createdAt,
-      blue_verified: blueVerified,
-      followers_count: legacy.followers_count,
-      friends_count: legacy.friends_count,
-      listed_count: legacy.listed_count,
-      statuses_count: legacy.statuses_count,
-      media_count: legacy.media_count,
-      favourites_count: legacy.favourites_count,
-      protected: legacy.protected,
-      _userInfo: {
-        id,
-        username: legacy.screen_name,
-        name: legacy.name ?? legacy.screen_name,
-        profilePicture: legacy.profile_image_url_https,
-        followersCount: legacy.followers_count,
-        followingCount: legacy.friends_count,
-        createdAt,
-        blueVerified,
-        description: legacy.description,
-      },
-    };
-
-    return ok(data);
   } catch (error) {
     console.error("RapidAPI fetch error:", error);
-    // Network / DNS / timeout — transient, not a missing account.
+    // Network / DNS / timeout — no HTTP round-trip, so no quota was spent.
     return err(new Error("UPSTREAM_ERROR"));
   }
+
+  // An HTTP response came back → this request counted against the plan quota.
+  recordUpstreamCall();
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    console.error("RapidAPI error:", response.status, responseText.slice(0, 300));
+    if (response.status === 404) return err(new Error("ACCOUNT_NOT_FOUND"));
+    if (response.status === 429) return err(new Error("RATE_LIMIT_EXCEEDED"));
+    // 401/403 (bad key), 5xx, etc. are our/upstream problem, not a missing account.
+    return err(new Error("UPSTREAM_ERROR"));
+  }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(responseText);
+  } catch {
+    console.error("Failed to parse RapidAPI response:", responseText.slice(0, 300));
+    return err(new Error("UPSTREAM_ERROR"));
+  }
+
+  const user = extractUser(json);
+  if (!user?.screenName) {
+    // No user object / unavailable / suspended → genuinely not found.
+    return err(new Error("ACCOUNT_NOT_FOUND"));
+  }
+
+  const id = user.restId ?? "";
+  const createdAt = user.createdAt ?? "";
+  const blueVerified = Boolean(user.isBlueVerified ?? false);
+
+  const data: XRawData = {
+    id,
+    created_at: createdAt,
+    blue_verified: blueVerified,
+    followers_count: user.followersCount,
+    friends_count: user.friendsCount,
+    listed_count: user.listedCount,
+    statuses_count: user.statusesCount,
+    media_count: user.mediaCount,
+    favourites_count: user.favouritesCount,
+    protected: user.isProtected,
+    _userInfo: {
+      id,
+      username: user.screenName,
+      name: user.name ?? user.screenName,
+      profilePicture: user.profilePicture,
+      followersCount: user.followersCount,
+      followingCount: user.friendsCount,
+      createdAt,
+      blueVerified,
+      description: user.description,
+    },
+  };
+
+  return ok(data);
 };
 
 /**
@@ -261,6 +322,19 @@ export async function POST(request: NextRequest) {
         code: "RATE_LIMIT_EXCEEDED",
       },
       { status: 429 }
+    );
+  }
+
+  // Global monthly budget guard → never exceed the paid plan's quota.
+  if (budgetRemaining() <= 0) {
+    console.warn("Monthly RapidAPI budget reached; refusing new upstream calls.");
+    return NextResponse.json<ErrorResponse>(
+      {
+        error:
+          "This service has reached its monthly capacity. Please try again later.",
+        code: "SERVICE_AT_CAPACITY",
+      },
+      { status: 503 }
     );
   }
 
