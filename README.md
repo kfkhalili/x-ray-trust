@@ -1,6 +1,6 @@
 # X Trust Radar
 
-A Micro SaaS that verifies the trustworthiness of X (Twitter) accounts using behavioral signals and metadata analysis.
+A free, stateless tool that verifies the trustworthiness of X (Twitter) accounts using behavioral signals and metadata analysis.
 
 ## Why X Trust Radar?
 
@@ -10,10 +10,10 @@ Social media impersonation and bot accounts are increasingly sophisticated. Trad
 
 - **Next.js 16** — App Router with React 19
 - **Tailwind CSS 4** — Utility-first styling
-- **Supabase** — Auth & PostgreSQL with RLS
-- **Stripe** — Credit-based payment system
-- **twitterapi.io** — X account metadata source
+- **RapidAPI** — X account metadata source (default: [`twitter241`](https://rapidapi.com/davethebeast/api/twitter241))
 - **Jest** — Unit testing
+
+No database, no accounts, no payments. The app is stateless: a lookup fetches public X data, scores it with a pure function, caches the result in memory for 24 hours, and returns it.
 
 ## Quick Start
 
@@ -21,29 +21,36 @@ Social media impersonation and bot accounts are increasingly sophisticated. Trad
 # Install dependencies
 npm install
 
-# Copy environment template
+# Copy environment template and add your RapidAPI key
 cp .env.example .env.local
-
-# Start local Supabase (requires Docker)
-npx supabase start
+# edit .env.local → set RAPIDAPI_KEY
 
 # Run development server
 npm run dev
 ```
 
+To get a key: create a [RapidAPI](https://rapidapi.com) account and **subscribe** to an X/Twitter API (the default is [`twitter241`](https://rapidapi.com/davethebeast/api/twitter241) — its cheapest plan is enough for an MVP). Each API on RapidAPI requires its own subscription even on the free tier.
+
 ## Environment Setup
 
-See `.env.example` for required variables:
+See `.env.example`. Only one variable is required:
 
-| Variable                        | Purpose                           |
-| ------------------------------- | --------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL              |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase key               |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Server-side operations (webhooks) |
-| `TWITTER_API_KEY`               | twitterapi.io API key             |
-| `STRIPE_SECRET_KEY`             | Stripe server key                 |
-| `STRIPE_WEBHOOK_SECRET`         | Stripe webhook signing            |
-| `NEXT_PUBLIC_APP_URL`           | App URL for redirects             |
+| Variable                  | Required | Purpose                                                             |
+| ------------------------- | -------- | ------------------------------------------------------------------- |
+| `RAPIDAPI_KEY`            | yes      | Your RapidAPI key (`X-RapidAPI-Key`)                                |
+| `RAPIDAPI_HOST`           | no       | Override the X API host (default `twitter241.p.rapidapi.com`)       |
+| `RAPIDAPI_MONTHLY_BUDGET` | no       | Cap on paid upstream calls per month (default `950`)                |
+| `NEXT_PUBLIC_APP_URL`     | no       | App URL (defaults to `http://localhost:3000`)                       |
+
+## How It Works
+
+1. `POST /api/verify { "username": "..." }`
+2. **Cache** — a fresh (<24h) in-memory result is returned immediately, with no upstream call.
+3. **Rate limit** — each IP is capped (10 lookups/hour) so no single visitor can drain your quota.
+4. **Budget guard** — a monthly cap (`RAPIDAPI_MONTHLY_BUDGET`, default 950) stops calls before the plan quota is hit; over budget returns `503 SERVICE_AT_CAPACITY` without calling the API.
+5. **Fetch → score → cache** — public account data is fetched via RapidAPI, scored by the trust engine, cached, and returned.
+
+> The cache, rate limit, and budget counters live in process memory. That's fine for an MVP, but on a serverless host they reset on cold starts and are per-instance — for a durable, shared cache use Vercel KV / Upstash, and rely on your RapidAPI plan's hard request limit for guaranteed billing protection.
 
 ## Trust Scoring Algorithm
 
@@ -65,7 +72,7 @@ The scoring engine uses **5 behavioral signals** weighted by their reliability i
 
 ### Special Cases
 
-- **Automated accounts**: If `is_automated` flag is true, score is capped at 15 (DANGER)
+- **Automated accounts**: If the `is_automated` flag is present and true, score is capped at 15 (DANGER)
 - **Missing data**: Factors default to neutral (50) when data is unavailable, with reduced confidence
 
 ## Project Structure
@@ -73,37 +80,27 @@ The scoring engine uses **5 behavioral signals** weighted by their reliability i
 ```
 ├── app/
 │   ├── api/
-│   │   ├── verify/       # Trust verification endpoint
-│   │   ├── checkout/     # Stripe checkout creation
-│   │   └── webhook/      # Stripe webhook handler
-│   ├── page.tsx          # Main search interface
-│   └── globals.css       # Tailwind v4 imports
+│   │   └── verify/        # Trust verification endpoint (fetch + cache + rate limit + budget)
+│   ├── page.tsx           # Main search interface
+│   ├── privacy|terms|cookies/  # Static legal pages
+│   └── globals.css        # Tailwind v4 imports
 ├── components/
-│   ├── TrustResults.tsx  # Full results display
-│   ├── RadialProgress.tsx# Animated score circle
-│   ├── ScoreBreakdown.tsx# Factor-by-factor analysis
-│   ├── UserDetails.tsx   # Profile card
-│   ├── CreditModal.tsx   # Purchase modal
-│   └── AuthButton.tsx    # Login/logout
+│   ├── TrustResults.tsx   # Full results display
+│   ├── RadialProgress.tsx # Animated score circle
+│   ├── ScoreBreakdown.tsx # Factor-by-factor analysis
+│   ├── UserDetails.tsx    # Profile card
+│   ├── Footer.tsx
+│   └── CookieBanner.tsx
 ├── lib/
-│   ├── trust-engine.ts   # Pure scoring functions
-│   ├── stripe.ts         # Stripe config
-│   ├── supabase/
-│   │   ├── server.ts     # Server client (async cookies)
-│   │   ├── client.ts     # Browser client
-│   │   └── admin.ts      # Service role client
-│   └── __tests__/        # Unit tests
-├── types/
-│   └── trust.ts          # Domain types
-├── scripts/
-│   └── add-credits.ts    # Dev utility: add credits to user
-└── supabase/
-    └── schema.sql        # Database schema
+│   ├── trust-engine.ts    # Pure scoring functions
+│   ├── fetch-utils.ts     # Client-side fetch (Result types)
+│   ├── validation.ts      # Type guards
+│   └── __tests__/         # Unit tests
+└── types/
+    └── trust.ts           # Domain types
 ```
 
 ## Development
-
-### Testing
 
 ```bash
 npm test              # Run all tests
@@ -111,83 +108,17 @@ npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report
 ```
 
-### Adding Credits (Dev)
-
-```bash
-npx tsx scripts/add-credits.ts user@example.com 100
-```
-
-### Local Stripe Webhooks
-
-```bash
-stripe listen --forward-to localhost:3000/api/webhook
-```
-
 ## Deployment
 
-### Quick Deploy to Vercel + Supabase
+Deploys to Vercel with a single environment variable. See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) and the [Vercel checklist](./docs/VERCEL_DEPLOYMENT_CHECKLIST.md).
 
-1. **Set up Supabase**:
-   - Create project at https://supabase.com
-   - Run `supabase/schema.sql` in SQL Editor
-   - Copy credentials from Project Settings → API
-
-2. **Configure Stripe**:
-   - Create products in Stripe Dashboard (50, 120, 250 credits)
-   - Copy Price IDs and update `lib/stripe.ts`
-   - Get API keys from Developers → API keys
-
-3. **Deploy to Vercel**:
-   - Import GitHub repository
-   - Add environment variables (see `.env.example`)
-   - Deploy and get your URL
-
-4. **Set up Webhook**:
-   - Add webhook endpoint in Stripe: `https://your-app.vercel.app/api/webhook`
-   - Select event: `checkout.session.completed`
-   - Copy signing secret to Vercel env vars
-
-5. **Configure Twitter API**:
-   - Get key from https://twitterapi.io
-   - Add to Vercel environment variables
-
-### Environment Variables
-
-Add these to Vercel (or `.env.local` for local dev):
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
-TWITTER_API_KEY=your_twitterapi_io_key
-STRIPE_SECRET_KEY=sk_live_... (or sk_test_...)
-STRIPE_WEBHOOK_SECRET=whsec_... (after webhook setup)
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-```
-
-### Testing Deployment
-
-1. **Authentication**: Sign in with email magic link, Google, or GitHub OAuth
-2. **Verification**: Try verifying a Twitter account (3 free per IP)
-3. **Payments**: Test with Stripe test card `4242 4242 4242 4242`
-
-### OAuth Setup (Google & GitHub)
-
-See [docs/OAUTH_SETUP.md](./docs/OAUTH_SETUP.md) for detailed instructions on setting up Google and GitHub OAuth login. OAuth credentials are configured in Supabase Dashboard, not in environment variables.
-
-### Free Tier Limits
-
-- **Vercel (Hobby)**: Unlimited deployments, 100GB bandwidth/month
-- **Supabase (Free)**: 500MB database, 2GB bandwidth, 50K MAU
-- **Stripe**: 2.9% + $0.30 per transaction (no monthly fees)
-
-For detailed deployment instructions, see [DEPLOYMENT.md](./docs/DEPLOYMENT.md).
+Short version: import the repo into Vercel, set `RAPIDAPI_KEY` (and make sure your RapidAPI plan has a hard request limit so you can't be billed for overage), deploy.
 
 ## Design Principles
 
 - **Pure Functions**: Trust calculations are stateless transformations
 - **Immutability**: All data types use `readonly` modifiers
-- **Type Safety**: Strict TypeScript, no `any` or type assertions
+- **Type Safety**: Strict TypeScript, no `any` or type assertions in domain code
 - **Why-First Comments**: Comments explain reasoning, not mechanics
 
 ## License

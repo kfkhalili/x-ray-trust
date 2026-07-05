@@ -1,157 +1,40 @@
 # Vercel Deployment Checklist
 
-Quick reference for deploying X Trust Radar to Vercel.
+Quick reference for deploying X Trust Radar to Vercel. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
 
-## Pre-Deployment Checklist
+## Pre-Deployment
 
-### 1. Supabase Setup ✅
+### 1. RapidAPI
 
-- [ ] Create Supabase project (or use existing)
-- [ ] Run `supabase/schema.sql` in SQL Editor
-- [ ] Copy credentials:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Create a [RapidAPI](https://rapidapi.com) account
+- [ ] Subscribe to an X/Twitter API (default: [`twitter241`](https://rapidapi.com/davethebeast/api/twitter241) → Pricing → subscribe)
+- [ ] **Set a hard request limit / no overage** on the plan (billing protection)
+- [ ] Copy your `X-RapidAPI-Key`
 
-### 2. Stripe Setup (Test Mode First)
+### 2. Code
 
-- [ ] Create 3 products in Stripe Dashboard (Test Mode):
-  - **Basic Pack - 50 Credits (€4.99)**: "Perfect for trying out X Trust Radar. Verify 50 Twitter accounts and discover who you can trust."
-    - Tax Category: **General - Electronically supplied services** (`txcd_10301001`)
-  - **Popular Pack - 100 Credits (€9.99)**: "Most popular choice! Double the credits for the same price per credit. Verify 100 Twitter accounts."
-    - Tax Category: **General - Electronically supplied services** (`txcd_10301001`)
-  - **Pro Pack - 250 Credits (€19.99)**: "For power users and businesses. Verify 250 Twitter accounts and save 20% compared to smaller packs."
-    - Tax Category: **General - Electronically supplied services** (`txcd_10301001`)
-- [ ] Copy Price IDs (start with `price_...`)
-- [ ] Update `lib/stripe.ts` with Price IDs
-- [ ] Commit and push to GitHub
-- [ ] Copy `STRIPE_SECRET_KEY` (test key: `sk_test_...`)
+- [ ] `npm run test` passes
+- [ ] `npx tsc --noEmit` is clean
+- [ ] Repo pushed to GitHub
 
-### 3. Twitter API
+## Deploy
 
-- [ ] Get API key from https://twitterapi.io
-- [ ] Copy `TWITTER_API_KEY`
+- [ ] Import the repo into Vercel
+- [ ] Add environment variables:
+  - [ ] `RAPIDAPI_KEY` (required)
+  - [ ] `RAPIDAPI_HOST` (optional — only if not using `twitter241`)
+  - [ ] `RAPIDAPI_MONTHLY_BUDGET` (optional — default 950)
+  - [ ] `NEXT_PUBLIC_APP_URL` (optional)
+- [ ] Deploy
 
-### 4. GitHub
+## Post-Deployment
 
-- [ ] Push all commits to GitHub
-- [ ] Verify repository is up to date
+- [ ] `POST /api/verify {"username":"elonmusk"}` → `200` with a trust report
+- [ ] Nonexistent handle → `404 ACCOUNT_NOT_FOUND`
+- [ ] Homepage loads, search works, no console errors
+- [ ] Confirm the RapidAPI dashboard shows the plan's hard limit is active
 
-## Vercel Deployment Steps
+## Notes
 
-### Step 1: Connect Repository
-
-1. Go to https://vercel.com
-2. Click "Add New Project"
-3. Import `kfkhalili/xtrustradar` from GitHub
-4. Vercel auto-detects Next.js ✅
-
-### Step 2: Environment Variables
-
-Add these in Vercel project settings → Environment Variables:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
-TWITTER_API_KEY=your_twitterapi_io_key
-STRIPE_SECRET_KEY=sk_test_... (use test key first!)
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app (update after first deploy)
-```
-
-**Note:** Don't add `STRIPE_WEBHOOK_SECRET` yet—you need the Vercel URL first.
-
-### Step 3: Deploy
-
-1. Click "Deploy"
-2. Wait for build (~2-3 minutes)
-3. Copy your Vercel URL (e.g., `xtrustradar.vercel.app`)
-
-### Step 4: Configure Stripe Webhook
-
-1. Go to Stripe Dashboard → Webhooks
-2. Click "Add endpoint"
-3. Enter: `https://your-app.vercel.app/api/webhook`
-4. Select event: `checkout.session.completed`
-5. Copy the **Signing secret** (`whsec_...`)
-6. Add to Vercel env vars as `STRIPE_WEBHOOK_SECRET`
-7. Redeploy (or wait for auto-redeploy)
-
-### Step 5: Update App URL
-
-1. Update `NEXT_PUBLIC_APP_URL` in Vercel with your actual URL
-2. Redeploy
-
-## Testing After Deployment
-
-### Test Checklist
-
-- [ ] Visit Vercel URL - page loads
-- [ ] Try 3 free lookups (unauthenticated)
-- [ ] Sign in with email magic link
-- [ ] Verify a Twitter account (should deduct credit)
-- [ ] Click "Buy Credits" - modal opens
-- [ ] Test checkout with Stripe test card: `4242 4242 4242 4242`
-- [ ] Verify credits added after payment
-- [ ] Check Stripe Dashboard - payment received
-- [ ] Check Stripe Webhooks - event received
-
-## Common Issues
-
-### Build Fails
-
-- Check environment variables are set
-- Verify TypeScript compiles locally: `npm run build`
-- Check Vercel build logs
-
-### Webhook Not Working
-
-- Verify webhook URL is correct
-- Check `STRIPE_WEBHOOK_SECRET` matches Stripe
-- Test with Stripe CLI locally first
-
-### Authentication Not Working
-
-- Verify Supabase URL and keys are correct
-- Check Supabase project is active
-- Verify email is configured in Supabase
-
-### Payments Not Working
-
-- Verify Price IDs in `lib/stripe.ts` match Stripe
-- Check Stripe keys are for correct environment (test vs live)
-- Verify webhook is receiving events
-
-## Going Live (After Testing)
-
-1. Switch Stripe to **Live Mode**
-2. Create products again in Live Mode
-3. Update `lib/stripe.ts` with Live Price IDs
-4. Update `STRIPE_SECRET_KEY` to live key (`sk_live_...`)
-5. Update webhook to use live webhook secret
-6. Test with real card (small amount)
-7. Monitor Stripe Dashboard
-
-## Quick Reference
-
-**Environment Variables Needed:**
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `TWITTER_API_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET` (after first deploy)
-- `NEXT_PUBLIC_APP_URL` (update after first deploy)
-
-**Stripe Test Card:**
-
-- Card: `4242 4242 4242 4242`
-- Any future expiry date
-- Any CVC
-
-**Support Docs:**
-
-- Full deployment: `docs/DEPLOYMENT.md`
-- Stripe setup: `docs/STRIPE_SETUP_GUIDE.md`
-- German launch: `docs/GERMAN_LAUNCH_GUIDE.md`
+- No database, auth, or payment setup is required — the app is stateless.
+- The in-memory cache / rate limit / monthly budget reset per serverless instance; for durable behavior move them to Vercel KV or Upstash. Your RapidAPI hard limit is the authoritative billing cap.
