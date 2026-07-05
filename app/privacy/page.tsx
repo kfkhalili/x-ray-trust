@@ -200,19 +200,12 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-100 mb-4">8. Cookies and Tracking Technologies</h2>
+            <h2 className="text-2xl font-semibold text-gray-100 mb-4">8. Cookies and Browser Storage</h2>
             <p className="mb-3">
-              We use cookies and similar technologies for the following purposes:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4 mb-3">
-              <li><strong>Session Storage:</strong> Used to preserve your most recent search result during your session. Cleared when you close your browser.</li>
-              <li><strong>Local Storage:</strong> Used to remember your cookie consent preference.</li>
-            </ul>
-            <p className="mb-3">
-              We do not use tracking cookies, advertising cookies, or analytics cookies that track you across websites. For more details, see our <a href="/cookies" className="text-emerald-400 hover:text-emerald-300 underline">Cookie Policy</a>.
+              We do not use cookies, and we set no advertising, analytics, or cross-site tracking technologies of any kind.
             </p>
             <p>
-              You can control cookies through your browser settings. However, disabling essential cookies may prevent the Service from functioning properly.
+              The Service stores one thing in your browser&apos;s session storage — your most recent search result — so it survives a page refresh during your visit. It is cleared when you close your browser, stays on your device, and is never sent to us. You can clear it at any time through your browser settings.
             </p>
           </section>
 

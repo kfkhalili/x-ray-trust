@@ -82,15 +82,14 @@ The scoring engine uses **5 behavioral signals** weighted by their reliability i
 │   ├── api/
 │   │   └── verify/        # Trust verification endpoint (fetch + cache + rate limit + budget)
 │   ├── page.tsx           # Main search interface
-│   ├── privacy|terms|cookies/  # Static legal pages
+│   ├── privacy|terms/     # Static legal pages
 │   └── globals.css        # Tailwind v4 imports
 ├── components/
 │   ├── TrustResults.tsx   # Full results display
 │   ├── RadialProgress.tsx # Animated score circle
 │   ├── ScoreBreakdown.tsx # Factor-by-factor analysis
 │   ├── UserDetails.tsx    # Profile card
-│   ├── Footer.tsx
-│   └── CookieBanner.tsx
+│   └── Footer.tsx
 ├── lib/
 │   ├── trust-engine.ts    # Pure scoring functions
 │   ├── fetch-utils.ts     # Client-side fetch (Result types)

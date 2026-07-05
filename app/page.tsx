@@ -4,7 +4,6 @@ import { useState, useEffect, type KeyboardEvent } from "react";
 import { Search, Loader2, Shield } from "lucide-react";
 import { TrustResults } from "@/components/TrustResults";
 import { Footer } from "@/components/Footer";
-import { CookieBanner } from "@/components/CookieBanner";
 import type { TrustReport } from "@/types/trust";
 import { verifyAccount } from "@/lib/fetch-utils";
 
@@ -149,9 +148,6 @@ export default function Home() {
         {/* Footer */}
         <Footer />
       </div>
-
-      {/* Cookie Banner */}
-      <CookieBanner />
     </div>
   );
 }

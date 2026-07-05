@@ -6,7 +6,7 @@ import Link from 'next/link';
  * Minimal footer with legal links.
  *
  * Why minimal? MVP focus. Full legal pages can be added later.
- * Essential links (Terms, Privacy, Cookies) for basic compliance.
+ * Essential links (Terms, Privacy) for basic compliance.
  */
 export const Footer = () => {
   return (
@@ -27,13 +27,6 @@ export const Footer = () => {
             className="hover:text-gray-300 transition-colors"
           >
             Privacy Policy
-          </Link>
-          <span className="hidden sm:inline text-gray-600">•</span>
-          <Link
-            href="/cookies"
-            className="hover:text-gray-300 transition-colors"
-          >
-            Cookie Policy
           </Link>
         </div>
       </div>
