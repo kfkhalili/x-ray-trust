@@ -24,7 +24,6 @@ Quick reference for deploying X Trust Radar to Vercel. See [DEPLOYMENT.md](./DEP
   - [ ] `RAPIDAPI_KEY` (required)
   - [ ] `RAPIDAPI_HOST` (optional — only if not using `twitter241`)
   - [ ] `RAPIDAPI_MONTHLY_BUDGET` (optional — default 950)
-  - [ ] `NEXT_PUBLIC_APP_URL` (optional)
 - [ ] Deploy
 
 ## Post-Deployment

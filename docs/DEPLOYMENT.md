@@ -20,7 +20,6 @@ X Trust Radar is a stateless Next.js app with a single external dependency (a Ra
    # optional:
    # RAPIDAPI_HOST=twitter241.p.rapidapi.com      # only if you use a different X API
    # RAPIDAPI_MONTHLY_BUDGET=950                   # app-level cap on paid calls/month
-   # NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
    ```
 
 3. Deploy. Vercel builds with `next build` automatically.

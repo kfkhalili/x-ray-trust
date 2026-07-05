@@ -40,7 +40,6 @@ See `.env.example`. Only one variable is required:
 | `RAPIDAPI_KEY`            | yes      | Your RapidAPI key (`X-RapidAPI-Key`)                                |
 | `RAPIDAPI_HOST`           | no       | Override the X API host (default `twitter241.p.rapidapi.com`)       |
 | `RAPIDAPI_MONTHLY_BUDGET` | no       | Cap on paid upstream calls per month (default `950`)                |
-| `NEXT_PUBLIC_APP_URL`     | no       | App URL (defaults to `http://localhost:3000`)                       |
 
 ## How It Works
 
